@@ -57,7 +57,7 @@ description: 当用户询问 Agent Skills、想找可复用的 AI 能力、需�
 用户要求安装时：
 
 1. 调用 `get_skill` 取回全部文件。
-2. 优先放进本仓库金库 `skills/{slug}/`，再在 `profiles/global.yaml` 声明目标平台，运行 `graft apply`。
+2. 优先放进本仓库金库 `skills/{slug}/`，再在 `profiles/global.yaml` 声明目标平台，运行 `atkits apply`。
 3. 如果只是临时试用，也可以直接写到当前项目的 `.agents/skills/{slug}/`（Codex / Cursor / OpenCode 共用）。
    - `SKILL.md` → `{slug}/SKILL.md`
    - 其余文件 → `{slug}/{filename}`

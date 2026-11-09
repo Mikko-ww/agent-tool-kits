@@ -1,7 +1,7 @@
 [project]
-name = "graft"
+name = "atkits"
 version = "0.1.0"
-description = "Graft agent skills / plugins from one vault onto many agent platforms (Claude Code, Codex, Cursor, OpenCode, pi, ...)."
+description = "Distribute agent skills / plugins from one vault onto many agent platforms (Claude Code, Codex, Cursor, OpenCode, pi, ...)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -11,14 +11,14 @@ dependencies = [
 ]
 
 [project.scripts]
-graft = "graft.cli:app"
+atkits = "atkits.cli:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/graft"]
+packages = ["src/atkits"]
 
 [tool.ruff]
 line-length = 100

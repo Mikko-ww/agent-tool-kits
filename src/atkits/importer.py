@@ -1,4 +1,4 @@
-"""`graft import`：收编散落在各平台目录里的技能。
+"""`atkits import`：收编散落在各平台目录里的技能。
 
 以 ~/.codex/skills/foo 为例：
 

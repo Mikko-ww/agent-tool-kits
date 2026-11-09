@@ -16,10 +16,11 @@ _NAME_RE = re.compile(r"^name:\s*[\"']?([^\"'\n]+?)[\"']?\s*$", re.MULTILINE)
 def find_root(start: Path | None = None) -> Path:
     """Locate the vault root.
 
-    Order: $GRAFT_HOME, then walk up from `start` (cwd) looking for `profiles/`
-    next to `skills/`, then fall back to the repository this package lives in.
+    Order: $ATKITS_HOME (legacy $GRAFT_HOME still honored), then walk up from
+    `start` (cwd) looking for `profiles/` next to `skills/`, then fall back to
+    the repository this package lives in.
     """
-    env = os.environ.get("GRAFT_HOME")
+    env = os.environ.get("ATKITS_HOME") or os.environ.get("GRAFT_HOME")
     if env:
         return Path(env).expanduser().resolve()
     here = (start or Path.cwd()).resolve()

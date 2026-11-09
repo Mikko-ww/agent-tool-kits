@@ -1,4 +1,4 @@
-"""graft 命令行入口。"""
+"""atkits 命令行入口。"""
 
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ def _main(
     version: Annotated[bool, typer.Option("--version", is_eager=True, help="显示版本")] = False,
 ) -> None:
     if version:
-        console.print(f"graft {__version__}")
+        console.print(f"atkits {__version__}")
         raise typer.Exit()
     if ctx.invoked_subcommand is None:
         console.print(ctx.get_help())
@@ -112,7 +112,7 @@ def status(
     """对比清单与磁盘实际状态，不做任何修改。"""
     vault, prof = _load(profile)
     report = engine.plan(vault, prof)
-    _render(report, title=f"graft status · {prof.path.name}", verbose=verbose)
+    _render(report, title=f"atkits status · {prof.path.name}", verbose=verbose)
     raise typer.Exit(1 if report.needs_work else 0)
 
 
@@ -142,7 +142,7 @@ def apply(
         err.print(f"[red]外部技能安装失败：[/red]{exc}")
         raise typer.Exit(1)
     label = "预演" if dry_run else "已执行"
-    _render(report, title=f"graft apply（{label}）· {prof.path.name}", verbose=verbose)
+    _render(report, title=f"atkits apply（{label}）· {prof.path.name}", verbose=verbose)
     for cmd in report.external_commands:
         prefix = "[magenta]将执行[/magenta]" if dry_run else "[magenta]已执行[/magenta]"
         console.print(f"{prefix}：{' '.join(cmd)}")
@@ -178,7 +178,7 @@ def import_(
         err.print("[red]--rename 只能用于单个技能[/red]")
         raise typer.Exit(2)
 
-    table = Table(title=f"graft import{'（预演）' if dry_run else ''}")
+    table = Table(title=f"atkits import{'（预演）' if dry_run else ''}")
     table.add_column("路径")
     table.add_column("名称")
     table.add_column("结果")
@@ -193,7 +193,7 @@ def import_(
         )
     console.print(table)
     if not dry_run:
-        console.print(f"清单已更新：{_short(prof.path)} —— 接下来运行 [bold]graft apply[/bold]")
+        console.print(f"清单已更新：{_short(prof.path)} —— 接下来运行 [bold]atkits apply[/bold]")
 
 
 @app.command("platforms")

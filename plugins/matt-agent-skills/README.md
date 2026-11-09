@@ -166,7 +166,7 @@ matt-grill-with-docs  →  matt-to-spec  →  matt-to-tickets  →  matt-impleme
 
 ## 本机启用（Cursor）
 
-由 `graft` 管理。清单 `profiles/global.yaml` 里已声明：
+由 `atkits` 管理。清单 `profiles/global.yaml` 里已声明：
 
 ```yaml
 plugins:
@@ -174,12 +174,12 @@ plugins:
 ```
 
 ```bash
-uv run graft status        # 插件行显示 copy / sync / ok
-uv run graft apply         # 拷贝到 ~/.cursor/plugins/local/matt-agent-skills
+uv run atkits status        # 插件行显示 copy / sync / ok
+uv run atkits apply         # 拷贝到 ~/.cursor/plugins/local/matt-agent-skills
 ```
 
 这是**拷贝**不是 symlink：Cursor 的本地插件加载器对 `~/.cursor/plugins/local/` 下的每个条目做
 `realpath` 校验，指向目录外的软链会被 `rejected: symlink target … is outside` 拒绝（可在
-`Cursor Plugins.log` 里看到）。因此改了本目录任何文件后，需要再跑一次 `graft apply`；`status` 会把过期的
-拷贝标为 `sync`，重新拷贝前旧副本会移到 `~/.local/share/graft/backup/<时间戳>/cursor-plugins/`。
+`Cursor Plugins.log` 里看到）。因此改了本目录任何文件后，需要再跑一次 `atkits apply`；`status` 会把过期的
+拷贝标为 `sync`，重新拷贝前旧副本会移到 `~/.local/share/atkits/backup/<时间戳>/cursor-plugins/`。
 Cursor 会在几秒内自动重新扫描本地插件目录，不需要重启。

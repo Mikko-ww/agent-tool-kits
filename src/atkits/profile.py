@@ -14,7 +14,7 @@
     plugins:
       matt-agent-skills: { to: [cursor] }                  # 金库插件（plugins/<name>/），拷贝同步
 
-清单用 ruamel.yaml 读写，`graft import` 回写时能保留注释。
+清单用 ruamel.yaml 读写，`atkits import` 回写时能保留注释。
 """
 
 from __future__ import annotations
@@ -103,7 +103,7 @@ class Profile:
             _doc=doc,
         )
 
-    # ---- mutation (used by `graft import`) -------------------------------
+    # ---- mutation (used by `atkits import`) -------------------------------
 
     def add_skill(self, spec: SkillSpec, *, replace: bool = False) -> bool:
         """Add `spec` to the in-memory document. Returns False if it already existed."""

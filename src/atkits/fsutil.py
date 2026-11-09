@@ -13,7 +13,7 @@ IGNORED_NAMES = {".DS_Store", "__pycache__", ".git"}
 
 def backup_root() -> Path:
     base = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
-    return base / "graft" / "backup"
+    return base / "atkits" / "backup"
 
 
 _session_stamp: str | None = None

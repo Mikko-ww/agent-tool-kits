@@ -2,7 +2,7 @@
 
 刻意设计为无状态，不需要 lock 文件就能检测漂移和孤儿：
 
-- 技能：一个链接“被 graft 管理”当且仅当它是 symlink 且解析后落在金库的 `skills/` 内。
+- 技能：一个链接“被 atkits 管理”当且仅当它是 symlink 且解析后落在金库的 `skills/` 内。
 - 插件：Cursor 的本地插件目录拒绝指向目录外的 symlink，所以走**拷贝同步**。
   “被管理”的判定退化为：目标是真实目录，且目录名对应金库 `plugins/` 里的一个插件；
   内容与金库逐文件比较决定 ok / sync。
@@ -32,7 +32,7 @@ class State(str, Enum):
     SYNC = "sync"  # (plugin) copy exists but differs from vault -> backup, re-copy
     CONFLICT = "conflict"  # real copy differs from vault -> needs --force
     EXTERNAL_MISSING = "external-missing"  # delegate to `npx skills add`
-    ORPHAN = "orphan"  # managed by graft but no longer declared in profile
+    ORPHAN = "orphan"  # managed by atkits but no longer declared in profile
     NOT_IN_VAULT = "not-in-vault"  # profile names a vault skill/plugin that does not exist
     ERROR = "error"  # filesystem operation failed (permissions, ...)
 

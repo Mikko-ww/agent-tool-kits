@@ -1,7 +1,7 @@
 # 机器级清单：每个平台的“全局”技能目录里应该有什么。
-# 应用方式：uv run graft apply   （或先 `uv tool install -e .`，再直接 `graft apply`）
+# 应用方式：uv run atkits apply   （或先 `uv tool install -e .`，再直接 `atkits apply`）
 #
-# 平台 id 与 vercel `skills` CLI 的 --agent 名称一致，可用 `graft platforms` 查看目录。
+# 平台 id 与 vercel `skills` CLI 的 --agent 名称一致，可用 `atkits platforms` 查看目录。
 targets:
   - claude-code
   - codex
