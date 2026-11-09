@@ -22,6 +22,8 @@ agent-tool-kits/
 ├── README.md                 # 用户视角的用法
 ├── docs/DESIGN.md            # 调研结论、架构决策、状态机、路线图（权威设计文档）
 ├── skills/                   # 金库：每个子目录一个技能，必含 SKILL.md（agentskills.io 格式）
+│   ├── ai-image-prompt-engineer/    # 通用图像提示词；保留原方法论，摄影规则按需启用
+│   ├── canvas-design/               # 静态视觉设计：设计哲学 → PNG/PDF，字体按需下载
 │   ├── searching-github-projects/   # 自有，中文
 │   ├── skill-lookup/                # 自有，中文
 │   └── sora/                        # 上游原样收编（Apache-2.0），保持英文
