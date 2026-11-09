@@ -1,4 +1,4 @@
-# agent-skills-graft · 设计文档
+# agent-tool-kits · 设计文档
 
 > 2026-09-10 · 状态：Phase 0 已落地（skills 全局分发）
 
@@ -30,7 +30,7 @@ SKILL.md 不会实时生效。这决定了本仓库自有技能由 `graft` **直
 ## 3. 架构
 
 ```
-agent-skills-graft/
+agent-tool-kits/
 ├── skills/                   # vault：自有技能，SKILL.md 目录（agentskills.io 格式）
 ├── plugins/                  # 自有插件：plugin.yaml + skills/（拷贝同步；目前 matt-agent-skills）
 ├── profiles/

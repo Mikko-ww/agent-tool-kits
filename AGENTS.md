@@ -1,4 +1,4 @@
-# AGENTS.md · agent-skills-graft
+# AGENTS.md · agent-tool-kits
 
 > 给接手本仓库的 AI agent / 开发者看的交接文档。先读完本文件，再看 `docs/DESIGN.md`。
 > 语言约定：本仓库所有面向人的文字（文档、注释、CLI 文案、自有技能）以**简体中文**为主。
@@ -17,7 +17,7 @@
 ## 2. 目录结构
 
 ```
-agent-skills-graft/
+agent-tool-kits/
 ├── AGENTS.md                 # 本文件：交接与约束
 ├── README.md                 # 用户视角的用法
 ├── docs/DESIGN.md            # 调研结论、架构决策、状态机、路线图（权威设计文档）

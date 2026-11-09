@@ -1,4 +1,4 @@
-# agent-skills-graft
+# agent-tool-kits
 
 一个仓库存放我所有的 agent 资产（目前是 skill；接下来是 agent / command / rule / plugin），
 通过声明式清单"嫁接"到我使用的各个平台——Claude Code、Codex、Cursor、OpenCode、pi——
