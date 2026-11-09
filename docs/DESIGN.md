@@ -1,6 +1,6 @@
 # agent-tool-kits · 设计文档
 
-> 2026-09-10 · 状态：Phase 0 已落地（skills 全局分发）
+> 2026-09-10 初稿 · 2026-11-09 更新 · 状态：Phase 1 已落地（skills 全局分发 + 插件拷贝同步）
 
 ## 1. 问题
 
@@ -36,7 +36,7 @@ agent-tool-kits/
 ├── profiles/
 │   ├── global.yaml           # 机器级：什么 → 哪个平台的全局目录
 │   └── projects/<name>.yaml  # 项目级（Phase 2）
-├── src/atkits/                # CLI（Python 3.11+，uv）
+├── src/atkits/               # CLI（Python 3.11+，uv）
 │   ├── platforms.py          #   平台注册表：各平台 project/global skills 目录、本地插件目录
 │   ├── vault.py              #   仓库根定位、技能/插件发现、frontmatter 解析
 │   ├── profile.py            #   YAML 清单加载/校验/回写（ruamel，保留注释）

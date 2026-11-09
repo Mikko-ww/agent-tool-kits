@@ -1,6 +1,6 @@
 # agent-tool-kits
 
-一个仓库存放我所有的 agent 资产（目前是 skill；接下来是 agent / command / rule / plugin），
+一个仓库存放我所有的 agent 资产（目前是 skill 和 plugin；接下来是 agent / command / rule），
 通过声明式清单"嫁接"到我使用的各个平台——Claude Code、Codex、Cursor、OpenCode、pi——
 而不是手动复制。
 
@@ -9,7 +9,7 @@ skills/                  # 金库（vault）：SKILL.md 目录，agentskills.io 
 plugins/                 # 插件：plugin.yaml + skills/，拷贝同步到平台本地插件目录
 profiles/global.yaml     # 机器级清单：什么装到哪个平台
 profiles/projects/*.yaml # 项目级清单（Phase 2）
-src/atkits/               # atkits 命令行（Python，uv）
+src/atkits/              # atkits 命令行（Python，uv）
 docs/DESIGN.md           # 调研、架构、路线图
 ```
 
@@ -44,6 +44,11 @@ Claude Code / Codex 走 marketplace，留给后续阶段。
 
 任何东西都不会被直接删除：被 `atkits` 替换掉的真实目录（包括过期的插件拷贝）会移到
 `~/.local/share/atkits/backup/<时间戳>/`。
+
+## 环境变量
+
+- `ATKITS_HOME`：金库根目录；默认从当前目录向上寻找含 `profiles/` 与 `skills/` 的目录。兼容旧变量 `GRAFT_HOME`。
+- `XDG_DATA_HOME`：备份目录前缀，默认 `~/.local/share`（备份位于 `<前缀>/atkits/backup/`）。
 
 ## 清单格式
 

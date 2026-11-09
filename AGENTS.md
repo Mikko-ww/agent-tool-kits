@@ -30,7 +30,7 @@ agent-tool-kits/
 ├── profiles/
 │   ├── global.yaml           # 机器级清单（当前唯一生效的清单）
 │   └── projects/<name>.yaml  # 项目级清单（Phase 2，目录尚未创建）
-├── src/atkits/                # CLI 源码，见 §4
+├── src/atkits/               # CLI 源码，见 §4
 ├── pyproject.toml            # uv 项目；入口 atkits = atkits.cli:app
 └── uv.lock
 ```
