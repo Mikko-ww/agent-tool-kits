@@ -602,14 +602,17 @@ Codex 示例：
 
 - `http_server`：暴露 `url`、按序记录的 `requests`、可编程路由和 `set_offline(True)`。
 - `fake_registry`：暴露 `refresh/resolve/latest/set_offline/remove`，不访问网络。
+- `fake_registry_server`：`http_server` 的 catalog 专用别名，预置 catalog 和资产下载路由。
 - `asset_package`：生成合法 tar 包、恶意 tar 包和 hash 不匹配包。
-- `platform_env`：假 HOME、假 cwd、假平台目录和 `ATKITS_HOME`。
-- `fake_lifecycle`：记录安装请求、包下载数量和错误注入点。
-- `catalog/install_target/home/asset_package/platform_env`：领域模型和路径环境基础假件。
-- `installer/plugin_record/shared_skill_record/package_v2`：安装策略和共享目标假件。
+- `platform_env`：假 HOME、假 cwd、假 `env`、假 `xdg_config`、假平台目录、`ATKITS_HOME`，并包含仅测试用的 `example-windows-only` 平台定义。
+- `fake_lifecycle`：记录安装请求、包下载数量、`fail_network`、`damage_managed_package` 和 `repaired_target`。
+- `catalog/asset/home/install_target/project_install_target/other_project_install_target`：领域模型和状态基础假件。
+- `package_store/package_v2/malicious_archive`：版本包与安全解包假件。
+- `installer/plugin_record/shared_skill_record/skill_record/editable_record/source_repo`：安装策略、共享目标、editable 和普通源码目录假件。
+- `project_root/other_project_root`：两个隔离的临时项目根，用于 project scope 测试。
 - `repo_with_two_skills/releases/favorites`：打包和 catalog 构造假件。
-- `fake_runtime/source_repo`：自更新与外部技能测试假件；`source_repo` 仅代表普通源码目录，不代表旧安装迁移。
-- `lifecycle/cli`：端到端 CLI 测试假件。
+- `fake_runtime`：自更新测试假件。
+- `lifecycle/cli/external_installer`：端到端 CLI、生命周期和外部技能测试假件。
 
 ---
 
@@ -875,7 +878,7 @@ git commit -m "实现版本包校验与安全缓存"
 - Create: `tests/test_platforms.py`
 
 **Interfaces:**
-- Produces: `load_registry()`、`detect_platforms(os_name, env, home)`、`resolve_targets(scope, platform_ids, cwd, os_name, env)`、`project_id(project_root)`。
+- Produces: `load_registry()`、`detect_platforms(os_name, env, home)`、`resolve_targets(scope, platform_ids, cwd, os_name, env)`、`project_id(project_root)`、`same_physical_path(left, right)`。
 
 - [ ] **Step 1: 写失败测试**
 
@@ -898,8 +901,8 @@ def test_cursor_global_has_primary_and_shared_paths(platform_env):
         os_name="darwin", env=platform_env.env,
     )
     paths = {t.target_id: t.path for t in targets}
-    assert paths["cursor"] == Path.home() / ".cursor/skills"
-    assert paths["agents"] == Path.home() / ".agents/skills"
+    assert paths["cursor"] == platform_env.home / ".cursor/skills"
+    assert paths["agents"] == platform_env.home / ".agents/skills"
 
 
 def test_opencode_uses_xdg_primary_and_agents_compatibility(platform_env):
@@ -909,7 +912,7 @@ def test_opencode_uses_xdg_primary_and_agents_compatibility(platform_env):
     )
     paths = {t.target_id: t.path for t in targets}
     assert paths["opencode"] == platform_env.xdg_config / "opencode/skills"
-    assert paths["agents"] == Path.home() / ".agents/skills"
+    assert paths["agents"] == platform_env.home / ".agents/skills"
     roles = {t.target_id: t.role for t in targets}
     assert roles["opencode"] == "primary"
     assert roles["agents"] == "compatibility"
