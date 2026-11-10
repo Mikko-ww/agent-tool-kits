@@ -775,7 +775,7 @@ git commit -m "实现统一目录与共享目标安装状态"
 **Interfaces:**
 - Produces: `GitHubReleaseClient.get_release_by_tag(tag)`、`download_asset(asset_id, destination)`；`RegistryClient.refresh()/cached()/resolve(kind, name, version=None)`。
 
-- [ ] **Step 1: 写本地 HTTP 失败测试**
+- [x] **Step 1: 写本地 HTTP 失败测试**
 
 ```python
 def test_private_asset_download_strips_token_on_cross_host_redirect(http_server, home):
@@ -794,21 +794,21 @@ def test_offline_registry_uses_cached_catalog(fake_registry):
     assert catalog.latest("skill", "foo").version == "1.1.0"
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_registry_github.py -v`
 Expected: FAIL，客户端尚未实现。
 
-- [ ] **Step 3: 实现安全 HTTPS 客户端**
+- [x] **Step 3: 实现安全 HTTPS 客户端**
 
 使用 `urllib.request`，设置 20 秒超时和 GitHub API version Header；自定义 `HTTPRedirectHandler`，当重定向目标 host 不是 `api.github.com` 时删除 `Authorization`。401/403/404/429 分别映射为认证、权限、资源不存在和限流错误，错误文本不包含 token。`refresh()` 定位固定 `registry` Release 中的 `catalog.json` 并原子替换本地缓存。
 
-- [ ] **Step 4: 验证通过**
+- [x] **Step 4: 验证通过**
 
 Run: `uv run pytest tests/test_registry_github.py -v`
 Expected: PASS，无真实外网请求。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/atkits/github.py src/atkits/registry.py tests/test_registry_github.py
