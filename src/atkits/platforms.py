@@ -1,4 +1,4 @@
-"""Platform registry, path expansion, and physical-target resolution."""
+"""Platform registry, OS-aware path expansion, and physical-target resolution."""
 
 from __future__ import annotations
 
@@ -45,74 +45,6 @@ class PhysicalTarget:
     strategy: str
     role: str
     shared: bool
-
-
-# Compatibility model used by the legacy engine until the new CLI lands.
-@dataclass(frozen=True)
-class Platform:
-    id: str
-    label: str
-    project_skills_dir: str
-    _global_skills_dir: str
-    _global_plugins_dir: str | None = None
-
-    def global_skills_dir(self) -> Path:
-        return _expand(self._global_skills_dir)
-
-    def skills_dir(self, project: Path | None = None) -> Path:
-        if project is None:
-            return self.global_skills_dir()
-        return project / self.project_skills_dir
-
-    @property
-    def supports_plugins(self) -> bool:
-        return self._global_plugins_dir is not None
-
-    def plugins_dir(self) -> Path:
-        if self._global_plugins_dir is None:
-            raise KeyError(f"platform '{self.id}' has no local plugins directory")
-        return _expand(self._global_plugins_dir)
-
-
-_PLATFORMS: tuple[Platform, ...] = (
-    Platform("claude-code", "Claude Code", ".claude/skills", "$CLAUDE_HOME/skills"),
-    Platform("codex", "Codex", ".agents/skills", "$CODEX_HOME/skills"),
-    Platform(
-        "cursor",
-        "Cursor",
-        ".agents/skills",
-        "$HOME/.cursor/skills",
-        _global_plugins_dir="$HOME/.cursor/plugins/local",
-    ),
-    Platform("opencode", "OpenCode", ".agents/skills", "$XDG_CONFIG_HOME/opencode/skills"),
-    Platform("pi", "pi", ".pi/skills", "$HOME/.pi/agent/skills"),
-    Platform("gemini-cli", "Gemini CLI", ".agents/skills", "$HOME/.gemini/skills"),
-    Platform("antigravity", "Antigravity", ".agents/skills", "$HOME/.gemini/antigravity/skills"),
-    Platform("github-copilot", "GitHub Copilot", ".agents/skills", "$HOME/.copilot/skills"),
-    Platform("universal", "Universal (.agents)", ".agents/skills", "$HOME/.agents/skills"),
-)
-
-PLATFORMS: dict[str, Platform] = {platform.id: platform for platform in _PLATFORMS}
-
-
-def get(platform_id: str) -> Platform:
-    try:
-        return PLATFORMS[platform_id]
-    except KeyError as exc:
-        known = ", ".join(PLATFORMS)
-        raise KeyError(f"unknown platform '{platform_id}' (known: {known})") from exc
-
-
-def detect_from_path(path: Path) -> Platform | None:
-    resolved = path.expanduser().absolute()
-    for platform in _PLATFORMS:
-        base = platform.global_skills_dir().absolute()
-        try:
-            resolved.relative_to(base)
-        except ValueError:
-            continue
-        return platform
-    return None
 
 
 def load_registry(path: Path | None = None) -> dict[str, PlatformDefinition]:
@@ -350,17 +282,3 @@ def _path_key(path: Path) -> str:
 
 def _is_windows_style_path(text: str) -> bool:
     return bool(re.match(r"^[A-Za-z]:[\\/]", text))
-
-
-def _expand(template: str) -> Path:
-    home = Path.home()
-    xdg_config = Path(os.environ.get("XDG_CONFIG_HOME") or home / ".config")
-    claude_home = Path(os.environ.get("CLAUDE_CONFIG_DIR") or home / ".claude")
-    codex_home = Path(os.environ.get("CODEX_HOME") or home / ".codex")
-    value = (
-        template.replace("$HOME", str(home))
-        .replace("$XDG_CONFIG_HOME", str(xdg_config))
-        .replace("$CLAUDE_HOME", str(claude_home))
-        .replace("$CODEX_HOME", str(codex_home))
-    )
-    return Path(value)

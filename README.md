@@ -1,71 +1,185 @@
 # agent-tool-kits
 
-一个仓库存放我所有的 agent 资产（目前是 skill 和 plugin；接下来是 agent / command / rule），
-通过声明式清单"嫁接"到我使用的各个平台——Claude Code、Codex、Cursor、OpenCode、pi——
-而不是手动复制。
+`atkits` 是一个面向个人私有 GitHub 仓库的 **Agent Skill / Plugin 版本管理器**。
+它通过 GitHub Releases 分发版本化资产，在本地维护安装状态，并把技能安装到用户显式选择的平台目录。
 
-```
-skills/                  # 金库（vault）：SKILL.md 目录，agentskills.io 格式
-plugins/                 # 插件：plugin.yaml + skills/，拷贝同步到平台本地插件目录
-profiles/global.yaml     # 机器级清单：什么装到哪个平台
-profiles/projects/*.yaml # 项目级清单（Phase 2）
-src/atkits/              # atkits 命令行（Python，uv）
-docs/DESIGN.md           # 调研、架构、路线图
+```text
+GitHub Releases
+  ├── CLI wheel
+  ├── Skill/Plugin 独立版本包
+  └── catalog.json
+        ↓ HTTPS + 只读 token
+~/.atkits
+  ├── config.toml
+  ├── state.json
+  ├── registry/catalog.json
+  └── packages/...
+        ↓ symlink / copy
+Codex / Cursor / OpenCode / Claude / ...
 ```
 
 ## 安装
 
+### 1. 创建 GitHub 只读 token
+
+1. GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens。
+2. Repository access 选择 `agent-tool-kits`。
+3. Permissions → Contents 设为 Read-only。
+4. 生成并复制 token。
+
+### 2. 安装 CLI
+
 ```bash
-uv sync                      # 开发方式：之后用 `uv run atkits ...`
-uv tool install -e .         # 或者把 `atkits` 装到 PATH
+export ATKITS_GITHUB_TOKEN="github_pat_xxx"
+curl -fsSL https://example.com/install-atkits.sh | bash
 ```
 
-## 使用
+也可以在仓库内执行：
 
 ```bash
-atkits status                 # 对比清单与磁盘，不改任何东西
-atkits apply --dry-run        # 只看计划
-atkits apply                  # 金库技能建 symlink，插件拷贝同步，外部技能走 `npx skills add`
-atkits apply --prune          # 同时清理清单里已不存在的金库 symlink / 插件拷贝
-atkits import ~/.codex/skills # 把散落的技能收编进金库和清单
-atkits platforms              # 各平台读取全局技能 / 本地插件的目录
-atkits skills                 # 金库里有什么技能
-atkits plugins                # 金库里有什么插件
+scripts/install-atkits.sh
 ```
 
-金库里的技能是直接 **symlink** 到各平台技能目录的，改一处 `skills/` 立即处处生效。
-外部技能（`source: owner/repo`）不入库，`atkits` 委托 [`npx skills add`](https://github.com/vercel-labs/skills)
-安装，由它维护自己的 lock 文件。
+安装脚本会：
 
-插件（`plugins/<name>/`）是 **拷贝同步**，不是 symlink：Cursor 的 `~/.cursor/plugins/local/` 会拒绝
-任何指向该目录之外的软链（realpath 校验）。所以改了 `plugins/` 之后要再跑一次 `atkits apply`，
-`status` 会把内容过期的拷贝标为 `sync`。目前只有 Cursor 有"放一个目录就能被发现"的本地插件机制，
-Claude Code / Codex 走 marketplace，留给后续阶段。
+- 检查 `uv`。
+- 要求 GitHub token。
+- 查询最新 CLI Release。
+- 下载 wheel 并校验 SHA-256。
+- 执行 `uv tool install --force <wheel>`。
 
-任何东西都不会被直接删除：被 `atkits` 替换掉的真实目录（包括过期的插件拷贝）会移到
-`~/.local/share/atkits/backup/<时间戳>/`。
+### 3. 初始化
 
-## 环境变量
+```bash
+atkits init --registry Mikko-ww/agent-tool-kits
+```
 
-- `ATKITS_HOME`：金库根目录；默认从当前目录向上寻找含 `profiles/` 与 `skills/` 的目录。兼容旧变量 `GRAFT_HOME`。
-- `XDG_DATA_HOME`：备份目录前缀，默认 `~/.local/share`（备份位于 `<前缀>/atkits/backup/`）。
+## 日常命令
 
-## 清单格式
+```bash
+atkits list --remote          # 列出远端 Skill / Plugin / CLI / 外部收藏 / preset
+atkits list                   # 列出本机安装记录
+atkits check                  # 强制刷新 catalog
+atkits status                 # 检查本机安装健康状态
+
+atkits install <name>         # 交互选择范围、平台、安装方式
+atkits install <name>@1.0.0   # 安装指定版本
+atkits install <name> --platform codex,cursor
+atkits install <name> --scope global --method symlink
+atkits install <name> --preset daily-coding
+atkits install <path> --editable
+
+atkits update <name>          # 更新到最新稳定版
+atkits uninstall <name> --platform codex
+atkits doctor                 # 检查本地状态
+atkits doctor --fix           # 修复受管损坏目标
+atkits cache prune            # 清理未引用版本包
+
+atkits self-update            # 更新 CLI wheel
+atkits platforms              # 查看平台路径定义
+atkits --version
+```
+
+非交互安装必须提供 `--platform`、`--preset` 或 `--all`。
+
+## 平台选择
+
+`atkits` 不默认安装到所有平台。安装前会解析逻辑平台到真实物理路径，并显示 primary/shared/compatibility 目标。
+
+例如 Cursor 同时支持：
+
+```text
+项目级：
+.agents/skills   → shared
+.cursor/skills   → primary
+
+全局：
+~/.agents/skills → shared
+~/.cursor/skills → primary
+```
+
+OpenCode 支持：
+
+```text
+全局 primary:      ~/.config/opencode/skills
+全局 compatibility: ~/.agents/skills
+```
+
+Codex 的全局用户目录是：
+
+```text
+~/.agents/skills
+```
+
+当多个平台共享同一路径时，`atkits` 只安装一份，并在 `state.json` 中记录 consumers。
+同一个物理路径同一时间只能激活一个版本；不同物理路径可以不同版本。
+
+## 版本
+
+- Skill / Plugin 使用 SemVer 2.0.0。
+- 默认安装最高稳定版本。
+- 预发布版本只有显式指定才安装。
+- 可安装历史版本实现回退。
+- CLI 使用 PEP 440 静态版本，Release tag 必须与 `pyproject.toml` 一致。
+
+## 外部技能收藏
+
+外部技能保存在 `favorites.yaml`，例如：
 
 ```yaml
-targets: [claude-code, codex, cursor, opencode, universal]
-
-skills:
-  searching-github-projects: { to: [codex, cursor] }   # 金库技能
-  mcp-builder: { to: "*" }                             # 全部 targets
-  frontend-design:                                     # 外部技能
-    source: anthropics/skills
-    to: [cursor, claude-code]
-
-plugins:
-  matt-agent-skills: { to: [cursor] }                  # 金库插件，拷贝到 ~/.cursor/plugins/local/
+external_skills:
+  pdf:
+    source: openai/skills
 ```
 
-目前的插件是 [`matt-agent-skills`](plugins/matt-agent-skills/README.md)。
+安装时 `atkits` 委托 `npx skills add`，但安装后必须验证目标目录存在 `SKILL.md`。
+外部技能不进入本仓库，不参与版本管理。
 
-完整设计与路线图见 [docs/DESIGN.md](docs/DESIGN.md)。
+## Editable 开发安装
+
+```bash
+atkits install ./skills/foo --editable --platform codex
+```
+
+Editable 安装会把平台目录链接到当前工作目录，适合本地开发。
+它不参与远端版本更新，也不会被 `cache prune` 清理。
+
+## 本地目录
+
+```text
+~/.atkits/
+├── config.toml
+├── state.json
+├── registry/catalog.json
+├── packages/
+├── downloads/
+├── backup/
+├── locks/
+├── logs/
+└── tmp/
+```
+
+`ATKITS_HOME` 可覆盖根目录。
+
+## 安全规则
+
+- 私有 Release 下载需要只读 token。
+- 跨主机 302 重定向会剥离 Authorization。
+- 所有包校验 SHA-256。
+- tar 解包拒绝路径穿越、symlink、hardlink 和设备文件。
+- 真实用户目录替换前进入 `~/.atkits/backup/`。
+- `cache prune` 不清理 backup 和 editable source。
+- Windows symlink 权限不足时不会静默降级为 copy。
+
+## 开发
+
+```bash
+uv sync --group dev
+uv run pytest
+uvx ruff format src tests scripts
+uvx ruff check src tests scripts
+uv build
+```
+
+详细架构见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，
+设计决策与历史见 [docs/DESIGN.md](docs/DESIGN.md)。

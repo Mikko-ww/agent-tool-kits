@@ -135,3 +135,28 @@ def test_install_external_skill(cli, fake_runtime, monkeypatch: pytest.MonkeyPat
     )
     assert result.exit_code == 0
     assert "pdf" in result.output
+
+
+def test_documented_commands_exist_in_help_and_readme(cli):
+    commands = [
+        "init",
+        "list",
+        "check",
+        "status",
+        "install",
+        "uninstall",
+        "update",
+        "doctor",
+        "cache",
+        "self-update",
+        "platforms",
+    ]
+    result = cli.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    readme = Path("README.md").read_text(encoding="utf-8")
+    for command in commands:
+        assert command in result.output
+        assert command in readme
+    cache_result = cli.invoke(app, ["cache", "--help"])
+    assert cache_result.exit_code == 0
+    assert "prune" in cache_result.output

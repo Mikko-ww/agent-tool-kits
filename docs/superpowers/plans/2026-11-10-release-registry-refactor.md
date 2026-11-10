@@ -1338,6 +1338,8 @@ git commit -m "接入外部技能收藏安装"
 - Delete: `src/atkits/engine.py`
 - Delete: `src/atkits/profile.py`
 - Delete: `src/atkits/importer.py`
+- Delete: `src/atkits/vault.py`
+- Delete: `src/atkits/fsutil.py`
 - Delete: `profiles/global.yaml` 中旧 `targets/to` 语义（保留 v2 collection）
 - Create: `tests/test_no_git.py`
 - Modify: `tests/test_cli.py`
@@ -1345,7 +1347,7 @@ git commit -m "接入外部技能收藏安装"
 **Interfaces:**
 - Produces: 与新 CLI 完全一致的用户文档、维护文档和无 Git 集成验收。
 
-- [ ] **Step 1: 写文档和无 Git 失败测试**
+- [x] **Step 1: 写文档和无 Git 失败测试**
 
 ```python
 def test_core_workflow_runs_without_git_in_path(fake_registry_server, tmp_path, monkeypatch):
@@ -1363,16 +1365,16 @@ def test_core_workflow_runs_without_git_in_path(fake_registry_server, tmp_path, 
     assert result.exit_code == 0
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_no_git.py -v`
 Expected: FAIL，当前 CLI 尚未完成或文档命令缺失。
 
-- [ ] **Step 3: 清理旧核心并更新文档**
+- [x] **Step 3: 清理旧核心并更新文档**
 
-删除不再被新 CLI 引用的 `engine/profile/importer`。README 覆盖 token 创建、新机器安装、平台选择、primary/shared 路径、远端列表、指定版本、回退、editable 和卸载；AGENTS.md 用新架构替换旧约束；DESIGN.md 标记旧引擎为历史设计；ARCHITECTURE.md 记录 catalog、state、路径解析和发布流水线。
+删除不再被新 CLI 引用的 `engine/profile/importer/vault/fsutil`。README 覆盖 token 创建、新机器安装、平台选择、primary/shared 路径、远端列表、指定版本、回退、editable 和卸载；AGENTS.md 用新架构替换旧约束；DESIGN.md 标记旧引擎为历史设计；ARCHITECTURE.md 记录 catalog、state、路径解析和发布流水线。
 
-- [ ] **Step 4: 执行完整验收**
+- [x] **Step 4: 执行完整验收**
 
 ```bash
 uv run pytest -v
@@ -1389,7 +1391,7 @@ env -i PATH="/tmp/atkits-final/test-venv/bin" HOME=/tmp/atkits-final/home \
 
 Expected: 测试、ruff、构建全部通过；集成测试证明无 Git PATH 下 list/install 可用；wheel 包含平台注册表；真实 HOME 无改动。随后由用户在测试发布仓库执行一次带只读 token 的私有 Release 安装验收。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add README.md AGENTS.md docs/DESIGN.md docs/ARCHITECTURE.md profiles/global.yaml \
