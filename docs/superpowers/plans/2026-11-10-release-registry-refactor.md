@@ -701,7 +701,7 @@ git commit -m "建立重构领域模型与测试骨架"
 **Interfaces:**
 - Produces: `AtkitsHome.discover(env, cwd)`、`ensure_layout()`、`load_config()`、`save_config()`；`StateStore.all()/get_target(kind, name, scope, project_id, target_id)/put()/remove()/remove_consumer()`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_state_round_trip_and_atomic_replace(home, install_target):
@@ -744,21 +744,21 @@ def test_home_never_writes_outside_override(tmp_path, monkeypatch):
     assert (tmp_path / "custom/packages").is_dir()
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_home_state.py -v`
 Expected: FAIL，缺少 `AtkitsHome` 和 `StateStore`。
 
-- [ ] **Step 3: 实现配置、目录和锁定写入**
+- [x] **Step 3: 实现配置、目录和锁定写入**
 
 `discover()` 优先读取 `ATKITS_HOME`，否则使用 `Path.home()/".atkits"`。state key 使用 `kind:name:scope:<project-id|global|editable>:<target-id>`。`put/remove/remove_consumer` 使用 `FileLock(locks/state.lock)`，写入临时文件后 `os.replace`。配置不得包含 token。
 
-- [ ] **Step 4: 验证通过**
+- [x] **Step 4: 验证通过**
 
 Run: `uv run pytest tests/test_home_state.py -v`
 Expected: PASS，且测试 HOME 外无文件变化。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/atkits/home.py src/atkits/state.py tests/test_home_state.py
