@@ -629,7 +629,7 @@ Codex 示例：
 - Produces: `AssetVersion(kind, name, version, asset_id, archive, sha256, source_revision=None, description=None)`、`Catalog.latest(kind, name)`、`Catalog.require_version(kind, name, version)`、`InstallTarget.key()`。
 - Consumes: 后续 registry、packages、state 和 lifecycle 只使用这些模型。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_latest_ignores_prerelease_and_upload_order(catalog):
@@ -654,12 +654,12 @@ def test_install_target_key_is_stable(install_target):
     assert install_target.key() == "skill:foo:global:agents"
 ```
 
-- [ ] **Step 2: 验证测试因模型不存在而失败**
+- [x] **Step 2: 验证测试因模型不存在而失败**
 
 Run: `uv run python -c "import atkits" && uv run pytest tests/test_models.py -v`
 Expected: import 成功；pytest FAIL，`ModuleNotFoundError: atkits.models`。
 
-- [ ] **Step 3: 实现模型和测试依赖**
+- [x] **Step 3: 实现模型和测试依赖**
 
 在 `pyproject.toml` 增加：
 
@@ -679,12 +679,12 @@ dev = ["pytest>=8", "pytest-cov>=5"]
 
 资产版本用 `semver.Version.parse()` 校验；CLI 版本用 `packaging.version.Version` 校验。catalog 解析拒绝未知 schema、非法 hash、空名称、重复版本和相同 precedence 的不同版本。
 
-- [ ] **Step 4: 运行模型测试和静态检查**
+- [x] **Step 4: 运行模型测试和静态检查**
 
 Run: `uv run pytest tests/test_models.py -v && uvx ruff format src/atkits/models.py tests/test_models.py && uvx ruff check src/atkits/models.py tests/test_models.py`
 Expected: 全部 PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add AGENTS.md pyproject.toml uv.lock src/atkits/models.py tests/conftest.py tests/test_models.py

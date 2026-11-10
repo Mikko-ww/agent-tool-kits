@@ -1,6 +1,8 @@
 # AGENTS.md · agent-tool-kits
 
 > 给接手本仓库的 AI agent / 开发者看的交接文档。先读完本文件，再看 `docs/DESIGN.md`。
+>
+> 2026-11-10 起按 `docs/superpowers/plans/2026-11-10-release-registry-refactor.md` 重构：新核心使用 `~/.atkits/state.json` 记录安装 provenance，且不保留旧 `apply/import` 兼容入口；本文其余内容仍描述当前旧实现，实施完成后同步更新。
 > 语言约定：本仓库所有面向人的文字（文档、注释、CLI 文案、自有技能）以**简体中文**为主。
 
 ## 1. 这个仓库是什么
