@@ -15,7 +15,8 @@ import pytest
 
 from atkits.home import AtkitsHome
 from atkits.github import GitHubNetworkError
-from atkits.models import AssetVersion, Catalog, InstallTarget
+from atkits.models import AssetVersion, Catalog, InstallTarget, RegistryError
+from atkits.packages import PackageError
 from atkits.packages import PackageStore
 from atkits.registry import RegistryClient
 
@@ -525,3 +526,142 @@ def editable_record(home: AtkitsHome, source_repo, tmp_path: Path) -> InstallTar
         consumers=("codex",),
         source_path=source_repo.skill_path,
     )
+
+
+class FakeRegistry:
+    def __init__(self, assets: dict[tuple[str, str], dict[str, AssetVersion]]) -> None:
+        self.assets = assets
+        self.offline = False
+
+    def resolve(self, kind: str, name: str, version: str | None = None) -> AssetVersion:
+        if self.offline:
+            raise RegistryError("offline")
+        versions = self.assets.get((kind, name))
+        if not versions:
+            raise RegistryError(f"{kind} {name!r} not found")
+        if version is None:
+            stable = [
+                asset for asset in versions.values() if asset.parsed_version.prerelease is None
+            ]
+            if not stable:
+                raise RegistryError(f"{name}: no stable version")
+            return max(stable, key=lambda asset: asset.parsed_version)
+        try:
+            return versions[version]
+        except KeyError as exc:
+            raise RegistryError(f"{name}@{version} not found") from exc
+
+    def set_offline(self, value: bool) -> None:
+        self.offline = value
+
+    def remove(self, kind: str, name: str) -> None:
+        self.assets.pop((kind, name), None)
+
+
+class FakePackageStore:
+    def __init__(
+        self,
+        packages: dict[tuple[str, str, str], Path],
+        assets: dict[tuple[str, str, str], AssetVersion],
+    ) -> None:
+        self.packages = packages
+        self.assets = assets
+        self.package_downloads = 0
+
+    def cached_asset(self, kind: str, name: str, version: str) -> AssetVersion | None:
+        return self.assets.get((kind, name, version))
+
+    def ensure(self, asset: AssetVersion) -> Path:
+        self.package_downloads += 1
+        try:
+            return self.packages[(asset.kind, asset.name, asset.version)]
+        except KeyError as exc:
+            raise PackageError(f"missing package for {asset.name}@{asset.version}") from exc
+
+    def path_for(self, kind: str, name: str, version: str) -> Path:
+        return self.packages[(kind, name, version)]
+
+
+def _make_asset(kind: str, name: str, version: str, asset_id: int) -> AssetVersion:
+    return AssetVersion(
+        kind=kind,
+        name=name,
+        version=version,
+        asset_id=asset_id,
+        archive=f"{name}-{version}.tar.gz",
+        sha256=f"{asset_id:064d}",
+    )
+
+
+def _make_skill_package(root: Path, name: str, version: str) -> Path:
+    package = root / f"{name}-{version}"
+    (package / "SKILL.md").parent.mkdir(parents=True, exist_ok=True)
+    (package / "SKILL.md").write_text(
+        f"---\nname: {name}\ndescription: test\nmetadata:\n  version: {version}\n---\n",
+        encoding="utf-8",
+    )
+    return package
+
+
+def _make_plugin_package(root: Path, name: str, version: str) -> Path:
+    package = root / f"{name}-{version}"
+    package.mkdir(parents=True, exist_ok=True)
+    (package / "plugin.yaml").write_text(f"name: {name}\nversion: {version}\n", encoding="utf-8")
+    return package
+
+
+@pytest.fixture
+def project_root(tmp_path: Path) -> Path:
+    root = tmp_path / "project-a"
+    root.mkdir()
+    return root
+
+
+@pytest.fixture
+def other_project_root(tmp_path: Path) -> Path:
+    root = tmp_path / "project-b"
+    root.mkdir()
+    return root
+
+
+@pytest.fixture
+def lifecycle(platform_env, home: AtkitsHome, installer, tmp_path: Path):
+    from atkits.lifecycle import Lifecycle
+    from atkits.state import StateStore
+
+    package_root = tmp_path / "lifecycle-packages"
+    package_root.mkdir()
+    packages = {
+        ("skill", "foo", "1.0.0"): _make_skill_package(package_root, "foo", "1.0.0"),
+        ("skill", "foo", "1.1.0"): _make_skill_package(package_root, "foo", "1.1.0"),
+        ("plugin", "bar", "1.1.0"): _make_plugin_package(package_root, "bar", "1.1.0"),
+    }
+    assets = {
+        ("skill", "foo"): {
+            "1.0.0": _make_asset("skill", "foo", "1.0.0", 1),
+            "1.1.0": _make_asset("skill", "foo", "1.1.0", 2),
+        },
+        ("plugin", "bar"): {
+            "1.1.0": _make_asset("plugin", "bar", "1.1.0", 3),
+        },
+    }
+    fake_registry = FakeRegistry(assets)
+    package_assets = {
+        (asset.kind, asset.name, asset.version): asset
+        for versions in assets.values()
+        for asset in versions.values()
+    }
+    package_store = FakePackageStore(packages, package_assets)
+    state = StateStore(home)
+    result = Lifecycle(
+        home,
+        fake_registry,
+        package_store,
+        installer,
+        state,
+        os_name="darwin",
+        env=platform_env.env,
+    )
+    result.fake_registry = fake_registry
+    result.package_store = package_store
+    return result

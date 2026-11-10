@@ -52,3 +52,9 @@ def test_sha256_file_is_stable(tmp_path):
     path = tmp_path / "file.txt"
     path.write_bytes(b"stable")
     assert sha256_file(path) == sha256_file(path)
+
+
+def test_cached_asset_round_trips(package_store, asset, write_valid_archive):
+    package_store.ensure(asset, downloader=write_valid_archive)
+    cached = package_store.cached_asset("skill", "foo", "1.1.0")
+    assert cached == asset

@@ -1034,7 +1034,7 @@ git commit -m "实现共享物理目标安装与卸载策略"
 **Interfaces:**
 - Produces: `Lifecycle.install(kind, name, version=None, *, scope, platform_ids, method, project_root=None)`、`uninstall(kind, name, *, scope, platform_ids, project_root=None)`、`update(kind, name, *, scope)`、`plan_update(kind, name, *, scope)`、`status(online=False)`、`prune_cache()`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_install_update_and_offline_rollback(lifecycle):
@@ -1090,21 +1090,21 @@ def test_uninstall_removed_remote_asset_still_uses_local_state(lifecycle):
     assert lifecycle.state.all() == []
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_lifecycle.py -v`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现生命周期**
+- [x] **Step 3: 实现生命周期**
 
 写操作按 `registry → platform resolution → package → target → state → health` 执行。共享路径版本不一致时报冲突。平台成功但 state 写入失败时恢复安装前目标，无法恢复则保留备份并返回明确错误。更新只解析最新稳定 SemVer。
 
-- [ ] **Step 4: 验证通过**
+- [x] **Step 4: 验证通过**
 
 Run: `uv run pytest tests/test_lifecycle.py -v`
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/atkits/lifecycle.py tests/test_lifecycle.py

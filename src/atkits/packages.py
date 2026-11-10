@@ -81,6 +81,29 @@ class PackageStore:
             if temporary.exists():
                 _remove_tree(temporary)
 
+    def cached_asset(self, kind: str, name: str, version: str) -> AssetVersion | None:
+        destination = self.path_for(kind, name, version)
+        marker_path = destination / _PACKAGE_MARKER
+        if not marker_path.is_file():
+            return None
+        try:
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return None
+        if not isinstance(marker, dict):
+            return None
+        try:
+            return AssetVersion(
+                kind=str(marker["kind"]),
+                name=str(marker["name"]),
+                version=str(marker["version"]),
+                asset_id=int(marker["asset_id"]),
+                archive=str(marker["archive"]),
+                sha256=str(marker["artifact_sha256"]),
+            )
+        except (KeyError, TypeError, ValueError):
+            return None
+
     def _cache_is_valid(self, destination: Path, asset: AssetVersion) -> bool:
         marker_path = destination / _PACKAGE_MARKER
         if not marker_path.is_file():
@@ -210,6 +233,8 @@ def _write_package_marker(root: Path, asset: AssetVersion) -> None:
         "kind": asset.kind,
         "name": asset.name,
         "version": asset.version,
+        "asset_id": asset.asset_id,
+        "archive": asset.archive,
         "artifact_sha256": asset.sha256,
     }
     (root / _PACKAGE_MARKER).write_text(
