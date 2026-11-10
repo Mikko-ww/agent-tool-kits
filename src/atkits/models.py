@@ -74,6 +74,10 @@ class InstallTarget:
     artifact_sha256: str | None = None
     content_sha256: str | None = None
 
+    @property
+    def target_path(self) -> Path:
+        return self.path
+
     def key(self) -> str:
         if self.scope == "project":
             return f"{self.kind}:{self.name}:project:{self.project_id}:{self.target_id}"

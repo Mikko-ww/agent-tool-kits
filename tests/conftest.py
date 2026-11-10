@@ -2,6 +2,7 @@ import dataclasses
 import hashlib
 import io
 import json
+import shutil
 import tarfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -406,4 +407,121 @@ def platform_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         env=env,
         xdg_config=xdg_config,
         registry_path=registry_path,
+    )
+
+
+@pytest.fixture
+def package_dir(tmp_path: Path) -> Path:
+    root = tmp_path / "package-v1"
+    (root / "foo").mkdir(parents=True)
+    (root / "foo/SKILL.md").write_text(
+        "---\nname: foo\ndescription: test\nmetadata:\n  version: 1.0.0\n---\n",
+        encoding="utf-8",
+    )
+    return root
+
+
+@pytest.fixture
+def package_v2(tmp_path: Path) -> Path:
+    root = tmp_path / "package-v2"
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "plugin.yaml").write_text("name: bar\nversion: 1.1.0\n", encoding="utf-8")
+    (root / "skills").mkdir()
+    (root / "skills/README.md").write_text("plugin\n", encoding="utf-8")
+    return root
+
+
+@pytest.fixture
+def installer(home: AtkitsHome):
+    from atkits.installers import Installer
+
+    return Installer(home)
+
+
+@pytest.fixture
+def skill_record(home: AtkitsHome, package_dir: Path, tmp_path: Path) -> InstallTarget:
+    target = tmp_path / "targets" / "skill"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.symlink_to(package_dir.resolve())
+    return InstallTarget(
+        kind="skill",
+        name="foo",
+        scope="global",
+        project_id=None,
+        version="1.0.0",
+        target_id="agents",
+        path=target,
+        strategy="symlink",
+        consumers=("codex",),
+        package_path=package_dir,
+    )
+
+
+@pytest.fixture
+def shared_skill_record(home: AtkitsHome, package_dir: Path, tmp_path: Path) -> InstallTarget:
+    target = tmp_path / "targets" / "shared-skill"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.symlink_to(package_dir.resolve())
+    return InstallTarget(
+        kind="skill",
+        name="foo",
+        scope="global",
+        project_id=None,
+        version="1.0.0",
+        target_id="agents",
+        path=target,
+        strategy="symlink",
+        consumers=("codex", "cursor"),
+        package_path=package_dir,
+    )
+
+
+@pytest.fixture
+def plugin_record(home: AtkitsHome, package_v2: Path, tmp_path: Path) -> InstallTarget:
+    target = tmp_path / "targets" / "plugin"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(package_v2, target)
+    from atkits.packages import sha256_tree
+
+    return InstallTarget(
+        kind="plugin",
+        name="bar",
+        scope="global",
+        project_id=None,
+        version="1.1.0",
+        target_id="cursor",
+        path=target,
+        strategy="copy",
+        consumers=("cursor",),
+        package_path=package_v2,
+        content_sha256=sha256_tree(target),
+    )
+
+
+@pytest.fixture
+def source_repo(tmp_path: Path):
+    root = tmp_path / "source-repo"
+    skill_path = root / "skills" / "foo"
+    skill_path.mkdir(parents=True)
+    (skill_path / "SKILL.md").write_text(
+        "---\nname: foo\ndescription: editable\n---\n", encoding="utf-8"
+    )
+    return SimpleNamespace(root=root, skill_path=skill_path)
+
+
+@pytest.fixture
+def editable_record(home: AtkitsHome, source_repo, tmp_path: Path) -> InstallTarget:
+    target = tmp_path / "targets" / "editable"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    return InstallTarget(
+        kind="skill",
+        name="foo",
+        scope="editable",
+        project_id=None,
+        version=None,
+        target_id="editable",
+        path=target,
+        strategy="editable",
+        consumers=("codex",),
+        source_path=source_repo.skill_path,
     )

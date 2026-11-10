@@ -969,7 +969,7 @@ git commit -m "实现跨平台路径解析与物理目标归并"
 **Interfaces:**
 - Produces: `Installer.install(record, package_dir)`、`uninstall(record, consumers)`、`health(record)`、`BackupStore.backup(path)`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_copy_update_detects_user_modification(installer, plugin_record, package_v2):
@@ -1004,21 +1004,21 @@ def test_editable_install_uses_source_path_not_package_cache(
     assert editable_record.package_path is None
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_installers.py -v`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现策略**
+- [x] **Step 3: 实现策略**
 
 symlink 只在目标指向记录包路径或 editable `source_path` 时替换或 unlink；copy 只有当前 hash 与记录一致时才备份并更新。真实用户目录默认冲突。共享目标卸载时先比较剩余 consumers。所有真实目录移除前移动到 `~/.atkits/backup/<UTC时间戳>/`。
 
-- [ ] **Step 4: 验证通过**
+- [x] **Step 4: 验证通过**
 
 Run: `uv run pytest tests/test_installers.py -v`
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/atkits/installers.py tests/test_installers.py
