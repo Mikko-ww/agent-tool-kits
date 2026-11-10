@@ -1,18 +1,101 @@
-"""把*外部*技能（owner/repo 来源）委托给 vercel `skills` CLI。
-
-第三方技能不入库；清单只记录来源，由 `npx skills add` 执行安装并维护它自己的
-`.skill-lock.json`。
-"""
+"""Delegate external skill favorites to the vercel skills CLI."""
 
 from __future__ import annotations
 
 import shutil
 import subprocess
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+from atkits.models import Catalog
+from atkits.platforms import load_registry, resolve_targets
 
 
 class ExternalError(RuntimeError):
-    pass
+    """Raised when an external skill cannot be installed or verified."""
+
+
+@dataclass(frozen=True)
+class ExternalHealth:
+    installed: bool
+    path: Path | None
+
+
+CommandRunner = Callable[[str, str, list[str]], None]
+
+
+class ExternalInstaller:
+    """Install and verify external skills listed in the remote catalog."""
+
+    def __init__(
+        self,
+        catalog: Catalog | Mapping[str, Any],
+        home: Path,
+        *,
+        os_name: str,
+        env: Mapping[str, str],
+        command_runner: CommandRunner | None = None,
+    ) -> None:
+        if isinstance(catalog, Catalog):
+            self.external_skills = catalog.external_skills()
+        else:
+            raw = catalog.get("external_skills") or {}
+            if not isinstance(raw, Mapping):
+                raise ExternalError("external_skills must be a mapping")
+            self.external_skills = dict(raw)
+        self.home = home
+        self.os_name = os_name
+        self.env = dict(env)
+        self.command_runner = command_runner or _default_command_runner
+
+    def install(self, name: str, platform_ids: list[str]) -> ExternalHealth:
+        entry = self.external_skills.get(name)
+        if not isinstance(entry, Mapping):
+            raise ExternalError(f"unknown external skill {name!r}")
+        source = entry.get("source")
+        if not isinstance(source, str) or not source:
+            raise ExternalError(f"external skill {name!r} has no source")
+        if not platform_ids:
+            raise ExternalError("external skill install requires at least one platform")
+
+        self.command_runner(source, name, platform_ids)
+        health = self.health(name, platform_ids=platform_ids)
+        if not health.installed:
+            raise ExternalError(f"external skill {name!r} is not installed after runner")
+        return health
+
+    def health(
+        self,
+        name: str,
+        *,
+        platform_ids: list[str] | None = None,
+        paths: list[Path] | None = None,
+    ) -> ExternalHealth:
+        candidates = paths if paths is not None else self._candidate_paths(name, platform_ids)
+        for path in candidates:
+            if path.is_symlink() and not path.exists():
+                continue
+            if path.is_dir() and (path / "SKILL.md").is_file():
+                return ExternalHealth(installed=True, path=path)
+        return ExternalHealth(installed=False, path=candidates[0] if candidates else None)
+
+    def _candidate_paths(self, name: str, platform_ids: list[str] | None) -> list[Path]:
+        selected = platform_ids or sorted(load_registry())
+        targets = resolve_targets("global", selected, Path.cwd(), self.os_name, self.env)
+        return [target.path / name for target in targets]
+
+
+def _default_command_runner(source: str, name: str, platform_ids: list[str]) -> None:
+    run_add(
+        source,
+        [name],
+        platform_ids,
+        global_scope=True,
+        cwd=None,
+        dry_run=False,
+    )
 
 
 def skills_cli_available() -> bool:

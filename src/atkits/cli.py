@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 
 from atkits import __version__
+from atkits.external import ExternalError, ExternalInstaller
 from atkits.github import GitHubNetworkError, GitHubReleaseClient
 from atkits.home import AtkitsHome
 from atkits.installers import InstallConflict, Installer
@@ -107,6 +108,13 @@ def _split_platforms(value: str | None) -> list[str] | None:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _catalog_for_runtime(runtime: Runtime) -> Catalog:
+    try:
+        return runtime.registry.cached()
+    except (AttributeError, RegistryError):
+        return runtime.lifecycle.check()
+
+
 @app.command()
 def init(
     registry: Annotated[str, typer.Option(help="GitHub 仓库，例如 owner/repo")],
@@ -188,9 +196,34 @@ def install(
         version = parsed_version
     platform_ids = _split_platforms(platform)
     runtime = _build_runtime()
+    try:
+        catalog = _catalog_for_runtime(runtime)
+    except GitHubNetworkError as exc:
+        err.print(f"[red]网络错误：[/red]{exc}")
+        raise typer.Exit(3) from exc
+    except RegistryError as exc:
+        err.print(f"[red]catalog 错误：[/red]{exc}")
+        raise typer.Exit(1) from exc
+    if not editable and name in catalog.external_skills():
+        home = runtime.home.path if hasattr(runtime.home, "path") else runtime.home
+        try:
+            external = ExternalInstaller(
+                catalog,
+                home,
+                os_name=_current_os_name(),
+                env=os.environ,
+            ).install(name, platform_ids or [])
+        except ExternalError as exc:
+            err.print(f"[red]外部技能安装失败：[/red]{exc}")
+            raise typer.Exit(1) from exc
+        console.print(
+            f"[green]已安装外部技能：[/green]{name} -> {_short(external.path)}"
+            if external.path
+            else f"[green]已安装外部技能：[/green]{name}"
+        )
+        return
     if preset is not None:
         try:
-            catalog = runtime.lifecycle.check()
             preset_data = catalog.preset(preset)
         except GitHubNetworkError as exc:
             err.print(f"[red]网络错误：[/red]{exc}")

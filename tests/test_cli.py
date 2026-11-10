@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
 
@@ -111,3 +113,25 @@ def test_self_update_command(cli, fake_runtime, monkeypatch: pytest.MonkeyPatch)
     result = cli.invoke(app, ["self-update"])
     assert result.exit_code == 0
     assert "0.2.0" in result.output
+
+
+def test_install_external_skill(cli, fake_runtime, monkeypatch: pytest.MonkeyPatch):
+    from atkits.external import ExternalHealth
+
+    class FakeExternalInstaller:
+        def __init__(self, catalog, home, *, os_name, env, command_runner=None):
+            self.catalog = catalog
+            self.home = home
+            self.os_name = os_name
+            self.env = env
+
+        def install(self, name: str, platform_ids: list[str]):
+            return ExternalHealth(installed=True, path=Path(f"/tmp/{name}"))
+
+    monkeypatch.setattr(cli_module, "ExternalInstaller", FakeExternalInstaller)
+    result = cli.invoke(
+        app,
+        ["install", "pdf", "--platform", "codex", "--no-input"],
+    )
+    assert result.exit_code == 0
+    assert "pdf" in result.output

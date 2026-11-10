@@ -1294,7 +1294,7 @@ git commit -m "实现私有仓库命令安装与自更新"
 **Interfaces:**
 - Produces: `install_external(name, platform_ids)`、`external_health(name)`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_broken_external_symlink_is_not_installed(external_installer):
@@ -1307,21 +1307,21 @@ def test_external_install_requires_resolved_skill_dir(external_installer):
     assert (result.path / "SKILL.md").is_file()
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_external.py -v`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现外部技能委托**
+- [x] **Step 3: 实现外部技能委托**
 
 外部收藏来自 catalog `external_skills`。安装继续委托 `npx skills add`，但安装后必须检查目标为可解析目录且包含 `SKILL.md`；broken symlink、普通文件或空目录都视为未安装并返回错误。
 
-- [ ] **Step 4: 验证通过**
+- [x] **Step 4: 验证通过**
 
 Run: `uv run pytest tests/test_external.py -v`
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/atkits/external.py src/atkits/cli.py tests/test_external.py
