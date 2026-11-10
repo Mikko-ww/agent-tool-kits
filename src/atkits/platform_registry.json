@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "platforms": [
+    {
+      "id": "codex",
+      "display_name": "Codex",
+      "project_paths": [
+        { "id": "agents", "template": ".agents/skills", "role": "primary" }
+      ],
+      "global_paths": [
+        { "id": "agents", "template": "$HOME/.agents/skills", "role": "primary" }
+      ],
+      "detect": [{ "type": "path", "template": "$HOME/.codex" }]
+    },
+    {
+      "id": "cursor",
+      "display_name": "Cursor",
+      "project_paths": [
+        { "id": "agents", "template": ".agents/skills", "role": "shared" },
+        { "id": "cursor", "template": ".cursor/skills", "role": "primary" }
+      ],
+      "global_paths": [
+        { "id": "agents", "template": "$HOME/.agents/skills", "role": "shared" },
+        { "id": "cursor", "template": "$HOME/.cursor/skills", "role": "primary" }
+      ],
+      "detect": [{ "type": "path", "template": "$HOME/.cursor" }]
+    },
+    {
+      "id": "opencode",
+      "display_name": "OpenCode",
+      "project_paths": [
+        { "id": "agents", "template": ".agents/skills", "role": "shared" },
+        { "id": "opencode", "template": ".opencode/skills", "role": "primary" }
+      ],
+      "global_paths": [
+        { "id": "agents", "template": "$HOME/.agents/skills", "role": "compatibility" },
+        {
+          "id": "opencode",
+          "template": "$XDG_CONFIG_HOME/opencode/skills",
+          "role": "primary"
+        }
+      ],
+      "detect": [{ "type": "path", "template": "$XDG_CONFIG_HOME/opencode" }]
+    },
+    {
+      "id": "claude-code",
+      "display_name": "Claude Code",
+      "project_paths": [
+        { "id": "claude", "template": ".claude/skills", "role": "primary" }
+      ],
+      "global_paths": [
+        { "id": "claude", "template": "$CLAUDE_CONFIG_DIR/skills", "role": "primary" }
+      ],
+      "detect": [{ "type": "path", "template": "$CLAUDE_CONFIG_DIR" }]
+    },
+    {
+      "id": "antigravity",
+      "display_name": "Antigravity",
+      "project_paths": [
+        { "id": "agents", "template": ".agents/skills", "role": "primary" }
+      ],
+      "global_paths": [
+        { "id": "antigravity", "template": "$HOME/.gemini/config/skills", "role": "primary" }
+      ],
+      "detect": [{ "type": "path", "template": "$HOME/.gemini/antigravity" }]
+    },
+    {
+      "id": "github-copilot",
+      "display_name": "GitHub Copilot",
+      "project_paths": [
+        { "id": "agents", "template": ".agents/skills", "role": "primary" }
+      ],
+      "global_paths": [
+        { "id": "copilot", "template": "$HOME/.copilot/skills", "role": "primary" }
+      ],
+      "detect": [{ "type": "path", "template": "$HOME/.copilot" }]
+    },
+    {
+      "id": "pi",
+      "display_name": "Pi",
+      "project_paths": [
+        { "id": "pi", "template": ".pi/skills", "role": "primary" }
+      ],
+      "global_paths": [
+        { "id": "pi", "template": "$HOME/.pi/agent/skills", "role": "primary" }
+      ],
+      "detect": [{ "type": "path", "template": "$HOME/.pi/agent" }]
+    },
+    {
+      "id": "gemini-cli",
+      "display_name": "Gemini CLI",
+      "project_paths": [
+        { "id": "agents", "template": ".agents/skills", "role": "primary" }
+      ],
+      "global_paths": [
+        { "id": "gemini", "template": "$HOME/.gemini/skills", "role": "primary" }
+      ],
+      "detect": [{ "type": "path", "template": "$HOME/.gemini" }]
+    }
+  ]
+}

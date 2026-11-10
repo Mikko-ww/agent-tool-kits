@@ -311,3 +311,99 @@ def wrong_asset(valid_archive: Path) -> AssetVersion:
         archive="foo-9.9.9.tar.gz",
         sha256=digest,
     )
+
+
+@pytest.fixture
+def platform_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    home = tmp_path / "home"
+    cwd = tmp_path / "project"
+    xdg_config = tmp_path / "xdg"
+    home.mkdir()
+    cwd.mkdir()
+    xdg_config.mkdir()
+    env = {
+        "HOME": str(home),
+        "USERPROFILE": str(home),
+        "XDG_CONFIG_HOME": str(xdg_config),
+        "XDG_DATA_HOME": str(tmp_path / "data"),
+        "CODEX_HOME": str(home / ".codex"),
+        "CLAUDE_CONFIG_DIR": str(home / ".claude"),
+    }
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    registry = {
+        "schema_version": 1,
+        "platforms": [
+            {
+                "id": "codex",
+                "display_name": "Codex",
+                "project_paths": [
+                    {"id": "agents", "template": ".agents/skills", "role": "primary"}
+                ],
+                "global_paths": [
+                    {"id": "agents", "template": "$HOME/.agents/skills", "role": "primary"}
+                ],
+                "detect": [{"type": "path", "template": "$HOME/.codex"}],
+            },
+            {
+                "id": "cursor",
+                "display_name": "Cursor",
+                "project_paths": [
+                    {"id": "agents", "template": ".agents/skills", "role": "shared"},
+                    {"id": "cursor", "template": ".cursor/skills", "role": "primary"},
+                ],
+                "global_paths": [
+                    {"id": "agents", "template": "$HOME/.agents/skills", "role": "shared"},
+                    {"id": "cursor", "template": "$HOME/.cursor/skills", "role": "primary"},
+                ],
+                "detect": [{"type": "path", "template": "$HOME/.cursor"}],
+            },
+            {
+                "id": "opencode",
+                "display_name": "OpenCode",
+                "project_paths": [
+                    {"id": "agents", "template": ".agents/skills", "role": "shared"},
+                    {"id": "opencode", "template": ".opencode/skills", "role": "primary"},
+                ],
+                "global_paths": [
+                    {
+                        "id": "agents",
+                        "template": "$HOME/.agents/skills",
+                        "role": "compatibility",
+                    },
+                    {
+                        "id": "opencode",
+                        "template": "$XDG_CONFIG_HOME/opencode/skills",
+                        "role": "primary",
+                    },
+                ],
+                "detect": [{"type": "path", "template": "$XDG_CONFIG_HOME/opencode"}],
+            },
+            {
+                "id": "example-windows-only",
+                "display_name": "Example Windows Only",
+                "project_paths": [
+                    {"id": "example", "template": ".example/skills", "role": "primary"}
+                ],
+                "global_paths": [
+                    {
+                        "id": "example",
+                        "template": "$APPDATA/example/skills",
+                        "role": "primary",
+                        "os": ["windows"],
+                    }
+                ],
+                "detect": [],
+            },
+        ],
+    }
+    registry_path = tmp_path / "platform_registry.json"
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+    monkeypatch.setenv("ATKITS_PLATFORM_REGISTRY", str(registry_path))
+    return SimpleNamespace(
+        home=home,
+        cwd=cwd,
+        env=env,
+        xdg_config=xdg_config,
+        registry_path=registry_path,
+    )

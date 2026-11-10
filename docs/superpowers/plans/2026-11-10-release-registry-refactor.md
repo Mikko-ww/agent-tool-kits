@@ -880,7 +880,7 @@ git commit -m "实现版本包校验与安全缓存"
 **Interfaces:**
 - Produces: `load_registry()`、`detect_platforms(os_name, env, home)`、`resolve_targets(scope, platform_ids, cwd, os_name, env)`、`project_id(project_root)`、`same_physical_path(left, right)`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_project_codex_cursor_opencode_share_agents_dir(platform_env):
@@ -939,21 +939,21 @@ def test_project_id_is_stable_for_equivalent_paths(tmp_path):
     assert project_id(root) != project_id(tmp_path / "other")
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_platforms.py -v`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现注册表和解析器**
+- [x] **Step 3: 实现注册表和解析器**
 
 加载 `platform_registry.json`；实现 OS 过滤、环境变量展开、`~` 展开、resolved path 归并、Windows `normcase`、`project_id` 和 `same_physical_path`。在 `pyproject.toml` 中显式 force-include registry JSON。
 
-- [ ] **Step 4: 验证通过和 wheel 打包**
+- [x] **Step 4: 验证通过和 wheel 打包**
 
 Run: `uv run pytest tests/test_platforms.py -v && uv build && unzip -p dist/atkits-*.whl atkits/platform_registry.json | python3 -m json.tool >/dev/null`
 Expected: 测试 PASS；wheel 中存在合法 JSON。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/atkits/platforms.py src/atkits/platform_registry.json pyproject.toml tests/test_platforms.py
