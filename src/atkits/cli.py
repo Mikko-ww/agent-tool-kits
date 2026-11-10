@@ -21,6 +21,7 @@ from atkits.models import Catalog, RegistryError
 from atkits.packages import PackageStore
 from atkits.platforms import load_registry
 from atkits.registry import RegistryClient
+from atkits.self_update import SelfUpdateError, self_update as run_self_update
 from atkits.state import StateStore
 
 app = typer.Typer(
@@ -293,6 +294,26 @@ def doctor(
     runtime = _build_runtime()
     reports = runtime.lifecycle.doctor(fix=fix)
     _render_status(reports)
+
+
+@app.command("self-update")
+def self_update_cmd() -> None:
+    """更新 atkits CLI 到最新 wheel。"""
+    runtime = _build_runtime()
+
+    def downloader(asset, destination: Path) -> None:
+        runtime.github.download_asset(asset.asset_id, destination)
+
+    try:
+        catalog = runtime.lifecycle.check()
+        version = run_self_update(uv_executable="uv", registry=catalog, downloader=downloader)
+    except GitHubNetworkError as exc:
+        err.print(f"[red]网络错误：[/red]{exc}")
+        raise typer.Exit(3) from exc
+    except (SelfUpdateError, RegistryError) as exc:
+        err.print(f"[red]自更新失败：[/red]{exc}")
+        raise typer.Exit(1) from exc
+    console.print(f"[green]已更新 atkits：[/green]{version}")
 
 
 @cache_app.command("prune")

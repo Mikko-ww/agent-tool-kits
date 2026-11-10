@@ -1253,7 +1253,7 @@ git commit -m "建立独立资产打包与串行发布目录"
 **Interfaces:**
 - Produces: `latest_cli_wheel(registry) -> AssetVersion`、`self_update(uv_executable="uv") -> Version`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_self_update_downloads_verified_wheel_and_invokes_uv(fake_runtime):
@@ -1263,21 +1263,21 @@ def test_self_update_downloads_verified_wheel_and_invokes_uv(fake_runtime):
     assert fake_runtime.downloaded_asset.sha256 == fake_runtime.expected_hash
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_self_update.py -v`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现引导和自更新**
+- [x] **Step 3: 实现引导和自更新**
 
 引导脚本要求 token，下载并校验 wheel 后调用 `uv tool install --force <wheel>`；缺少 uv 时给出官方安装文档地址并退出 1。自更新使用同一实现，不依赖 `uv tool upgrade` 发现 Release。
 
-- [ ] **Step 4: 验证通过**
+- [x] **Step 4: 验证通过**
 
 Run: `uv run pytest tests/test_self_update.py -v && bash -n scripts/install-atkits.sh`
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add scripts/install-atkits.sh src/atkits/self_update.py tests/test_self_update.py

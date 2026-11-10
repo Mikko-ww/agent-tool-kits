@@ -98,3 +98,16 @@ def test_install_uses_catalog_preset(cli, fake_lifecycle):
     assert fake_lifecycle.last_request["platform_ids"] == ["codex", "cursor"]
     assert fake_lifecycle.last_request["method"] == "symlink"
     assert fake_lifecycle.last_request["scope"] == "global"
+
+
+def test_self_update_command(cli, fake_runtime, monkeypatch: pytest.MonkeyPatch):
+    from packaging.version import Version
+
+    monkeypatch.setattr(
+        cli_module,
+        "run_self_update",
+        lambda uv_executable, *, registry, downloader: Version("0.2.0"),
+    )
+    result = cli.invoke(app, ["self-update"])
+    assert result.exit_code == 0
+    assert "0.2.0" in result.output
