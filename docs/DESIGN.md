@@ -1,6 +1,9 @@
 # agent-tool-kits · 设计文档
 
 > 2026-09-10 初稿 · 2026-11-09 更新 · 状态：Phase 1 已落地（skills 全局分发 + 插件拷贝同步）
+>
+> 2026-11-10 重构方向已确定：私有 GitHub Releases + 独立版本包 + `~/.atkits` + 用户显式选择平台并归并物理路径。
+> 实施契约与任务计划见 [Release Registry 重构实施计划](superpowers/plans/2026-11-10-release-registry-refactor.md)；本文其余部分记录当前实现。
 
 ## 1. 问题
 
