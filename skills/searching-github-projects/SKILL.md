@@ -1,6 +1,8 @@
 ---
 name: searching-github-projects
 description: Use whenever the user asks to search, discover, compare, shortlist, or rank GitHub repositories, including requests such as “帮我找 GitHub 项目”, “类似 X 的开源项目”, “高星项目”, open-source alternatives, competitors, technical-direction surveys, and vague product-direction searches.
+metadata:
+  version: 0.1.0
 ---
 
 # Searching GitHub Projects

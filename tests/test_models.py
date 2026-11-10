@@ -206,3 +206,49 @@ def test_asset_version_rejects_non_string_description():
 
 def test_catalog_names_returns_sorted_asset_names(catalog):
     assert catalog.names("skill") == ["foo"]
+
+
+def test_catalog_exposes_external_skills_and_presets():
+    catalog = Catalog(
+        {
+            "schema_version": 1,
+            "skills": {},
+            "external_skills": {
+                "pdf": {"source": "openai/skills"},
+            },
+            "collection": {
+                "presets": {
+                    "daily-coding": {
+                        "scope": "global",
+                        "platforms": ["codex", "cursor"],
+                        "method": "symlink",
+                    }
+                }
+            },
+        }
+    )
+    assert catalog.external_skills() == {"pdf": {"source": "openai/skills"}}
+    preset = catalog.preset("daily-coding")
+    assert preset.scope == "global"
+    assert preset.platforms == ("codex", "cursor")
+    assert preset.method == "symlink"
+
+
+def test_catalog_parses_direct_cli_section():
+    catalog = Catalog(
+        {
+            "schema_version": 1,
+            "cli": {
+                "latest": "0.2.0",
+                "versions": {
+                    "0.2.0": {
+                        "asset_id": 1,
+                        "archive": "atkits-0.2.0-py3-none-any.whl",
+                        "sha256": "0" * 64,
+                    }
+                },
+            },
+        }
+    )
+    assert catalog.names("cli") == ["atkits"]
+    assert catalog.latest("cli", "atkits").version == "0.2.0"

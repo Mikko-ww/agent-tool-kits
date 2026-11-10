@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "cli-v*"
+      - "skill-*-v*"
+      - "plugin-*-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group dev
+      - run: uv run pytest -v
+      - run: uvx ruff format --check src tests scripts
+      - run: uvx ruff check src tests scripts
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - id: tag
+        run: echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+      - run: uv sync --group dev
+      - name: Verify CLI tag matches pyproject version
+        if: startsWith(github.ref_name, 'cli-v')
+        run: |
+          VERSION="${GITHUB_REF_NAME#cli-v}"
+          grep -q "version = \"$VERSION\"" pyproject.toml
+      - name: Build CLI wheel
+        if: startsWith(github.ref_name, 'cli-v')
+        run: uv build
+      - name: Build asset archive
+        if: "!startsWith(github.ref_name, 'cli-v')"
+        run: uv run python scripts/release.py "$GITHUB_REF_NAME" "$GITHUB_WORKSPACE" dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag
+
+  catalog:
+    needs: publish
+    runs-on: ubuntu-latest
+    concurrency:
+      group: catalog
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group dev
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/releases --paginate > /tmp/releases.json
+          uv run python scripts/update_catalog.py /tmp/releases.json favorites.yaml profiles/global.yaml catalog.json
+          gh release view registry || gh release create registry
+          gh release upload registry catalog.json --clobber

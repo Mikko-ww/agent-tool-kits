@@ -84,6 +84,14 @@ class InstallTarget:
         return f"{self.kind}:{self.name}:{self.scope}:{self.target_id}"
 
 
+@dataclass(frozen=True)
+class CatalogPreset:
+    name: str
+    scope: str
+    platforms: tuple[str, ...]
+    method: str
+
+
 class Catalog:
     """Validated in-memory representation of catalog.json."""
 
@@ -93,12 +101,21 @@ class Catalog:
                 f"unsupported catalog schema_version {data.get('schema_version')!r}"
             )
         self._assets: dict[str, dict[str, AssetVersion]] = {}
+        self._external_skills = _parse_external_skills(data.get("external_skills"))
+        self._presets = _parse_presets(data.get("collection"))
         for kind in ("skill", "plugin", "cli"):
             section_key = "skills" if kind == "skill" else "plugins" if kind == "plugin" else "cli"
             section = data.get(section_key) or {}
             if not isinstance(section, Mapping):
                 raise RegistryError(f"catalog section {section_key!r} must be a mapping")
-            self._assets[kind] = self._parse_section(kind, section)
+            if kind == "cli":
+                versions = section.get("versions")
+                if not versions:
+                    self._assets[kind] = {}
+                else:
+                    self._assets[kind] = self._parse_section(kind, {"atkits": section})
+            else:
+                self._assets[kind] = self._parse_section(kind, section)
 
     def _parse_section(self, kind: str, section: Mapping[str, Any]) -> dict[str, AssetVersion]:
         parsed: dict[str, AssetVersion] = {}
@@ -130,6 +147,18 @@ class Catalog:
             parsed[str(name)] = {asset.version: asset for asset in assets}
         return parsed
 
+    def external_skills(self) -> dict[str, dict[str, object]]:
+        return dict(self._external_skills)
+
+    def presets(self) -> dict[str, CatalogPreset]:
+        return dict(self._presets)
+
+    def preset(self, name: str) -> CatalogPreset:
+        try:
+            return self._presets[name]
+        except KeyError as exc:
+            raise RegistryError(f"preset {name!r} not found") from exc
+
     def names(self, kind: str) -> list[str]:
         if kind not in ASSET_KINDS:
             raise RegistryError(f"unsupported asset kind {kind!r}")
@@ -155,6 +184,58 @@ class Catalog:
             return self._assets[kind][name]
         except KeyError as exc:
             raise RegistryError(f"{kind} {name!r} not found") from exc
+
+
+def _parse_external_skills(raw: object) -> dict[str, dict[str, object]]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, Mapping):
+        raise RegistryError("external_skills must be a mapping")
+    result: dict[str, dict[str, object]] = {}
+    for name, entry in raw.items():
+        _validate_name(str(name))
+        if not isinstance(entry, Mapping):
+            raise RegistryError(f"external skill {name}: entry must be an object")
+        source = entry.get("source")
+        if not isinstance(source, str) or not source:
+            raise RegistryError(f"external skill {name}: source must be a non-empty string")
+        result[str(name)] = dict(entry)
+    return result
+
+
+def _parse_presets(raw: object) -> dict[str, CatalogPreset]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, Mapping):
+        raise RegistryError("collection must be a mapping")
+    presets_raw = raw.get("presets")
+    if presets_raw is None:
+        return {}
+    if not isinstance(presets_raw, Mapping):
+        raise RegistryError("collection.presets must be a mapping")
+    result: dict[str, CatalogPreset] = {}
+    for name, entry in presets_raw.items():
+        _validate_name(str(name))
+        if not isinstance(entry, Mapping):
+            raise RegistryError(f"preset {name}: entry must be an object")
+        scope = entry.get("scope")
+        platforms = entry.get("platforms")
+        method = entry.get("method", "symlink")
+        if scope not in {"global", "project"}:
+            raise RegistryError(f"preset {name}: invalid scope {scope!r}")
+        if not isinstance(platforms, list) or not platforms:
+            raise RegistryError(f"preset {name}: platforms must be a non-empty list")
+        if not all(isinstance(platform, str) and platform for platform in platforms):
+            raise RegistryError(f"preset {name}: platforms must be strings")
+        if method not in {"symlink", "copy"}:
+            raise RegistryError(f"preset {name}: invalid method {method!r}")
+        result[str(name)] = CatalogPreset(
+            name=str(name),
+            scope=str(scope),
+            platforms=tuple(platforms),
+            method=str(method),
+        )
+    return result
 
 
 def _validate_name(name: str) -> None:

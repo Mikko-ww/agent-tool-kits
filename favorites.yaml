@@ -1,0 +1,15 @@
+external_skills:
+  find-skills:
+    source: vercel-labs/skills
+  mcp-builder:
+    source: anthropics/skills
+  skill-creator:
+    source: anthropics/skills
+  frontend-design:
+    source: anthropics/skills
+  figma-use:
+    source: openai/skills
+  pdf:
+    source: openai/skills
+  playwright:
+    source: openai/skills

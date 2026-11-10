@@ -1,6 +1,8 @@
 ---
 name: ai-image-prompt-engineer
 description: "Create and optimize detailed AI image-generation prompts across photography, illustration, design, 3D, and other visual styles, with an optional canvas mode for finished PNG/PDF artwork. Use for visual concept translation, prompt construction, platform-specific adaptation, negative prompts, brand visual prompt systems, posters, art, and static design."
+metadata:
+  version: 0.1.0
 ---
 
 # Image Prompt Engineer Skill

@@ -56,6 +56,18 @@ def catalog_data() -> dict[str, object]:
                 },
             }
         },
+        "external_skills": {
+            "pdf": {"source": "openai/skills"},
+        },
+        "collection": {
+            "presets": {
+                "daily-coding": {
+                    "scope": "global",
+                    "platforms": ["codex", "cursor"],
+                    "method": "symlink",
+                }
+            }
+        },
     }
 
 

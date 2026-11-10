@@ -186,9 +186,20 @@ def install(
         name, parsed_version = name.rsplit("@", 1)
         version = parsed_version
     platform_ids = _split_platforms(platform)
+    runtime = _build_runtime()
     if preset is not None:
-        err.print("[red]preset 尚未接入 catalog[/red]")
-        raise typer.Exit(2)
+        try:
+            catalog = runtime.lifecycle.check()
+            preset_data = catalog.preset(preset)
+        except GitHubNetworkError as exc:
+            err.print(f"[red]网络错误：[/red]{exc}")
+            raise typer.Exit(3) from exc
+        except RegistryError as exc:
+            err.print(f"[red]preset 错误：[/red]{exc}")
+            raise typer.Exit(2) from exc
+        scope = preset_data.scope
+        platform_ids = list(preset_data.platforms)
+        method = preset_data.method
     if all_platforms:
         platform_ids = sorted(load_registry())
     if no_input and not platform_ids:
@@ -200,7 +211,6 @@ def install(
         if not platform_ids:
             err.print("[red]必须选择至少一个平台[/red]")
             raise typer.Exit(2)
-    runtime = _build_runtime()
     try:
         if editable:
             source = Path(name).expanduser().resolve()
@@ -318,7 +328,25 @@ def _render_remote_catalog(catalog: Catalog) -> None:
         for name in catalog.names(kind):
             latest = catalog.latest(kind, name)
             table.add_row(kind, name, latest.version)
+    for name, entry in catalog.external_skills().items():
+        source = entry.get("source", "-")
+        table.add_row("external", name, str(source))
     console.print(table)
+    presets = catalog.presets()
+    if presets:
+        preset_table = Table(title="远端 presets")
+        preset_table.add_column("名称")
+        preset_table.add_column("范围")
+        preset_table.add_column("平台")
+        preset_table.add_column("方法")
+        for preset in presets.values():
+            preset_table.add_row(
+                preset.name,
+                preset.scope,
+                ",".join(preset.platforms),
+                preset.method,
+            )
+        console.print(preset_table)
 
 
 def _render_status(reports: list[object]) -> None:

@@ -15,6 +15,8 @@ def test_remote_list_does_not_download_packages(cli, fake_lifecycle):
     result = cli.invoke(app, ["list", "--remote"])
     assert result.exit_code == 0
     assert "foo" in result.output
+    assert "pdf" in result.output
+    assert "daily-coding" in result.output
     assert fake_lifecycle.package_downloads == 0
 
 
@@ -85,3 +87,14 @@ def test_version(cli):
     result = cli.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert "atkits" in result.output
+
+
+def test_install_uses_catalog_preset(cli, fake_lifecycle):
+    result = cli.invoke(
+        app,
+        ["install", "foo", "--preset", "daily-coding", "--no-input"],
+    )
+    assert result.exit_code == 0
+    assert fake_lifecycle.last_request["platform_ids"] == ["codex", "cursor"]
+    assert fake_lifecycle.last_request["method"] == "symlink"
+    assert fake_lifecycle.last_request["scope"] == "global"

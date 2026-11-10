@@ -1197,7 +1197,7 @@ git commit -m "切换 atkits 到平台选择式命令"
 **Interfaces:**
 - Produces: `package_asset(kind, name, version, repo_root, output_dir) -> Path`、`build_catalog(releases, favorites) -> dict`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_package_contains_only_selected_skill(repo_with_two_skills, tmp_path):
@@ -1214,12 +1214,12 @@ def test_catalog_latest_uses_semver_precedence(releases, favorites):
     assert catalog["external_skills"]["pdf"]["source"] == "openai/skills"
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_package_asset.py -v`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现打包、v2 collection 和 workflow**
+- [x] **Step 3: 实现打包、v2 collection 和 workflow**
 
 将 `profiles/global.yaml` 直接改写为 v2 collection；从旧带 `source` 的条目生成 `favorites.yaml`。四个现有 Skill 初始化 `metadata.version: 0.1.0`，Plugin 沿用现有版本。CI 将资产、外部收藏和 preset 投影到 catalog 的 `collection.presets`。workflow 设置 `permissions: contents: write`，并给 catalog job 配置：
 
@@ -1231,12 +1231,12 @@ concurrency:
 
 CLI 标签必须匹配 `pyproject.toml` 静态版本。`update_catalog.py` 按 SemVer 计算 latest，合并 favorites，并串行上传 `catalog.json`。
 
-- [ ] **Step 4: 本地验证发布产物**
+- [x] **Step 4: 本地验证发布产物**
 
 Run: `uv run pytest tests/test_package_asset.py -v && uv build && uv run python scripts/package_asset.py skill ai-image-prompt-engineer 0.1.0 . /tmp/atkits-dist`
 Expected: 测试 PASS，wheel 和单技能包均生成，包内版本与参数一致。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add profiles/global.yaml favorites.yaml scripts .github/workflows/release.yml tests/test_package_asset.py   skills/ai-image-prompt-engineer/SKILL.md skills/searching-github-projects/SKILL.md   skills/skill-lookup/SKILL.md skills/sora/SKILL.md

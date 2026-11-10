@@ -1,45 +1,20 @@
-# 机器级清单：每个平台的“全局”技能目录里应该有什么。
-# 应用方式：uv run atkits apply   （或先 `uv tool install -e .`，再直接 `atkits apply`）
-#
-# 平台 id 与 vercel `skills` CLI 的 --agent 名称一致，可用 `atkits platforms` 查看目录。
-targets:
-  - claude-code
-  - codex
-  - cursor
-  - opencode
-  - universal   # ~/.agents/skills：amp/cline/zed 读取，也是 `npx skills` 的规范目录
+schema_version: 2
+type: collection
 
-skills:
-  # ---- 金库技能（位于 ./skills，建 symlink，改动即时生效）----
-  ai-image-prompt-engineer: {to: [claude-code, codex, cursor, opencode, universal]}
-  searching-github-projects: {to: [claude-code, codex, cursor, opencode, universal]}
-  sora: {to: [codex]}
-  skill-lookup: {to: [codex]}
+assets:
+  ai-image-prompt-engineer:
+    kind: skill
+  searching-github-projects:
+    kind: skill
+  skill-lookup:
+    kind: skill
+  sora:
+    kind: skill
+  matt-agent-skills:
+    kind: plugin
 
-  # ---- 外部技能（不入库，通过 `npx skills add <source>` 安装）----
-  find-skills:
-    source: vercel-labs/skills
-    to: [universal]
-  mcp-builder:
-    source: anthropics/skills
-    to: [universal]
-  skill-creator:
-    source: anthropics/skills
-    to: [universal]
-  frontend-design:
-    source: anthropics/skills
-    to: [universal]
-  figma-use:
-    source: openai/skills
-    to: [codex]
-  pdf:
-    source: openai/skills
-    to: [codex]
-  playwright:
-    source: openai/skills
-    to: [codex]
-
-plugins:
-  # ---- 金库插件（位于 ./plugins，拷贝同步到平台本地插件目录；改动后需再跑 apply）----
-  # Cursor 拒绝 ~/.cursor/plugins/local 下指向目录外的 symlink，所以这里不是链接而是拷贝。
-  matt-agent-skills: {to: [cursor]}
+presets:
+  daily-coding:
+    scope: global
+    platforms: [codex, cursor]
+    method: symlink

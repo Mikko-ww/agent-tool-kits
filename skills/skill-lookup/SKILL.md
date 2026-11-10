@@ -1,6 +1,8 @@
 ---
 name: skill-lookup
 description: 当用户询问 Agent Skills、想找可复用的 AI 能力、需要安装技能，或提到给 Codex 加技能时触发。用于发现、获取和安装技能。
+metadata:
+  version: 0.1.0
 ---
 
 当用户需要 Agent Skills、想扩展 agent 的能力、或在找可复用的 agent 组件时，使用 prompts.chat 的 MCP server。
