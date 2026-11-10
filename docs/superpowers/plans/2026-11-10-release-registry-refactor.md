@@ -824,7 +824,7 @@ git commit -m "实现私有发布目录与安全下载客户端"
 **Interfaces:**
 - Produces: `sha256_file(path)`、`sha256_tree(path)`、`PackageStore.ensure(asset)`、`PackageStore.path_for(kind, name, version)`。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_package_rejects_path_traversal(package_store, malicious_archive):
@@ -848,21 +848,21 @@ def test_existing_non_empty_package_dir_is_not_replaced(package_store, asset):
         package_store.ensure(asset, downloader=write_valid_archive)
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_packages.py -v`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现最小包管理**
+- [x] **Step 3: 实现最小包管理**
 
 下载到临时文件并校验 SHA-256；tar 条目只允许普通文件和目录，拒绝绝对路径、`..` 和所有链接。解压后校验 `SKILL.md`/`plugin.yaml` 的名称和版本。最终目录不存在时才从唯一临时目录 rename；已存在非空目录时报错。
 
-- [ ] **Step 4: 验证通过**
+- [x] **Step 4: 验证通过**
 
 Run: `uv run pytest tests/test_packages.py -v`
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/atkits/packages.py tests/test_packages.py

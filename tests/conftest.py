@@ -1,8 +1,12 @@
 import dataclasses
+import hashlib
+import io
 import json
+import tarfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Iterator
 
@@ -10,8 +14,18 @@ import pytest
 
 from atkits.home import AtkitsHome
 from atkits.github import GitHubNetworkError
-from atkits.models import Catalog, InstallTarget
+from atkits.models import AssetVersion, Catalog, InstallTarget
+from atkits.packages import PackageStore
 from atkits.registry import RegistryClient
+
+
+def _create_archive(path: Path, entries: dict[str, bytes]) -> Path:
+    with tarfile.open(path, "w:gz") as archive:
+        for name, data in entries.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
+    return path
 
 
 @pytest.fixture
@@ -208,3 +222,92 @@ def fake_registry(home: AtkitsHome, catalog_data: dict[str, object]) -> FakeRegi
     home.catalog_path.write_text(catalog_text, encoding="utf-8")
     release = {"assets": [{"id": 42, "name": "catalog.json"}]}
     return FakeRegistryClient(home, FakeGitHubClient(release, catalog_text))
+
+
+@pytest.fixture
+def package_store(home: AtkitsHome) -> PackageStore:
+    return PackageStore(home)
+
+
+@pytest.fixture
+def valid_archive(tmp_path: Path) -> Path:
+    return _create_archive(
+        tmp_path / "foo-1.1.0.tar.gz",
+        {
+            "foo/SKILL.md": (
+                b"---\n"
+                b"name: foo\n"
+                b"description: test skill\n"
+                b"metadata:\n"
+                b"  version: 1.1.0\n"
+                b"---\n"
+                b"# foo\n"
+            )
+        },
+    )
+
+
+@pytest.fixture
+def asset(valid_archive: Path) -> AssetVersion:
+    digest = hashlib.sha256(valid_archive.read_bytes()).hexdigest()
+    return AssetVersion(
+        kind="skill",
+        name="foo",
+        version="1.1.0",
+        asset_id=10002,
+        archive="foo-1.1.0.tar.gz",
+        sha256=digest,
+    )
+
+
+@pytest.fixture
+def write_valid_archive(valid_archive: Path) -> Callable[[AssetVersion], Path]:
+    return lambda _asset: valid_archive
+
+
+@pytest.fixture
+def write_corrupted_archive(tmp_path: Path) -> Callable[[AssetVersion], Path]:
+    path = tmp_path / "corrupted.tar.gz"
+    path.write_bytes(b"not really a tarball")
+    return lambda _asset: path
+
+
+@pytest.fixture
+def malicious_archive(tmp_path: Path) -> Path:
+    return _create_archive(tmp_path / "malicious.tar.gz", {"../evil.txt": b"bad"})
+
+
+@pytest.fixture
+def symlink_archive(tmp_path: Path) -> Path:
+    path = tmp_path / "symlink.tar.gz"
+    with tarfile.open(path, "w:gz") as archive:
+        info = tarfile.TarInfo("foo/link")
+        info.type = tarfile.SYMTYPE
+        info.linkname = "/etc/passwd"
+        archive.addfile(info)
+    return path
+
+
+@pytest.fixture
+def wrong_version_archive(tmp_path: Path) -> Path:
+    return _create_archive(
+        tmp_path / "wrong.tar.gz",
+        {
+            "foo/SKILL.md": (
+                b"---\nname: foo\ndescription: test skill\nmetadata:\n  version: 1.0.0\n---\n"
+            )
+        },
+    )
+
+
+@pytest.fixture
+def wrong_asset(valid_archive: Path) -> AssetVersion:
+    digest = hashlib.sha256(valid_archive.read_bytes()).hexdigest()
+    return AssetVersion(
+        kind="skill",
+        name="foo",
+        version="9.9.9",
+        asset_id=10099,
+        archive="foo-9.9.9.tar.gz",
+        sha256=digest,
+    )
