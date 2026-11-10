@@ -11,6 +11,7 @@ targets:
 
 skills:
   # ---- 金库技能（位于 ./skills，建 symlink，改动即时生效）----
+  ai-image-prompt-engineer: {to: [claude-code, codex, cursor, opencode, universal]}
   searching-github-projects: {to: [claude-code, codex, cursor, opencode, universal]}
   sora: {to: [codex]}
   skill-lookup: {to: [codex]}
