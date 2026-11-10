@@ -665,3 +665,131 @@ def lifecycle(platform_env, home: AtkitsHome, installer, tmp_path: Path):
     result.fake_registry = fake_registry
     result.package_store = package_store
     return result
+
+
+class FakeCLILifecycle:
+    def __init__(self, catalog_data: dict[str, object]) -> None:
+        self.catalog_data = catalog_data
+        self.package_downloads = 0
+        self.last_request: dict[str, object] | None = None
+        self.fail_network = False
+        self.repaired_target: Path | None = None
+        self.damaged = False
+
+    def check(self):
+        if self.fail_network:
+            raise GitHubNetworkError("network unavailable")
+        return Catalog(self.catalog_data)
+
+    def install(
+        self,
+        kind: str,
+        name: str,
+        version: str | None = None,
+        *,
+        scope: str,
+        platform_ids: list[str],
+        method: str,
+        project_root: Path | None = None,
+    ):
+        self.last_request = {
+            "kind": kind,
+            "name": name,
+            "version": version,
+            "scope": scope,
+            "platform_ids": platform_ids,
+            "method": method,
+            "project_root": project_root,
+        }
+        self.package_downloads += 1
+        return SimpleNamespace(
+            version=version or "1.1.0",
+            path=Path(f"/tmp/{name}"),
+            project_id=None,
+        )
+
+    def install_editable(
+        self,
+        source_path: Path,
+        *,
+        scope: str,
+        platform_ids: list[str],
+        project_root: Path | None = None,
+    ):
+        self.last_request = {
+            "source_path": source_path,
+            "scope": scope,
+            "platform_ids": platform_ids,
+            "project_root": project_root,
+        }
+        return SimpleNamespace(
+            version=None,
+            path=Path(f"/tmp/{source_path.name}"),
+            project_id=None,
+        )
+
+    def uninstall(
+        self,
+        kind: str,
+        name: str,
+        *,
+        scope: str,
+        platform_ids: list[str],
+        project_root: Path | None = None,
+    ):
+        self.last_request = {
+            "kind": kind,
+            "name": name,
+            "scope": scope,
+            "platform_ids": platform_ids,
+            "project_root": project_root,
+        }
+        return []
+
+    def update(self, kind: str, name: str, *, scope: str):
+        return SimpleNamespace(version="1.1.0", path=Path(f"/tmp/{name}"), project_id=None)
+
+    def status(self):
+        return [
+            SimpleNamespace(
+                record=SimpleNamespace(
+                    kind="skill",
+                    name="foo",
+                    version="1.1.0",
+                    path=Path("/tmp/foo"),
+                    consumers=("codex",),
+                    strategy="symlink",
+                    project_id=None,
+                ),
+                healthy=not self.damaged,
+            )
+        ]
+
+    def doctor(self, fix: bool = False):
+        if fix and self.damaged:
+            self.repaired_target = Path("/tmp/foo")
+            self.damaged = False
+        elif not fix:
+            self.repaired_target = None
+        return self.status()
+
+    def damage_managed_package(self) -> None:
+        self.damaged = True
+        self.repaired_target = None
+
+    def prune_cache(self) -> list[Path]:
+        return []
+
+
+@pytest.fixture
+def fake_lifecycle(catalog_data: dict[str, object]) -> FakeCLILifecycle:
+    return FakeCLILifecycle(catalog_data)
+
+
+@pytest.fixture
+def fake_runtime(fake_lifecycle: FakeCLILifecycle):
+    return SimpleNamespace(
+        home=SimpleNamespace(path=Path("/tmp/atkits")),
+        registry=SimpleNamespace(),
+        lifecycle=fake_lifecycle,
+    )

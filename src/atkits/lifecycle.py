@@ -156,6 +156,51 @@ class Lifecycle:
             records.append(installed_record)
         return InstallResult(tuple(records))
 
+    def install_editable(
+        self,
+        source_path: Path,
+        *,
+        scope: str,
+        platform_ids: list[str],
+        project_root: Path | None = None,
+        name: str | None = None,
+        kind: str = "skill",
+    ) -> InstallResult:
+        if scope == "project":
+            if project_root is None:
+                raise LifecycleError("project scope requires project_root")
+            cwd = project_root
+            resolved_project_id = project_id(project_root)
+        elif scope == "global":
+            cwd = Path.cwd()
+            resolved_project_id = None
+        else:
+            raise LifecycleError(f"unsupported scope {scope!r}")
+
+        resolved_source = source_path.expanduser().resolve()
+        asset_name = name or resolved_source.name
+        targets = resolve_targets(scope, platform_ids, cwd, self.os_name, self.env)
+        if not targets:
+            raise LifecycleError(f"no physical targets for platforms {platform_ids!r}")
+        records: list[InstallTarget] = []
+        for target in targets:
+            record = InstallTarget(
+                kind=kind,
+                name=asset_name,
+                scope=scope,
+                project_id=resolved_project_id,
+                version=None,
+                target_id=target.target_id,
+                path=target.path / asset_name,
+                strategy="editable",
+                consumers=target.consumers,
+                source_path=resolved_source,
+            )
+            installed_record = self.installer.install(record, None)
+            self.state.put(installed_record)
+            records.append(installed_record)
+        return InstallResult(tuple(records))
+
     def update(
         self,
         kind: str,
@@ -238,6 +283,19 @@ class Lifecycle:
             StatusReport(record=record, healthy=self.installer.health(record))
             for record in self.state.all()
         ]
+
+    def check(self):
+        return self.registry.refresh()
+
+    def doctor(self, fix: bool = False) -> list[StatusReport]:
+        reports = self.status()
+        if fix:
+            for report in reports:
+                if report.healthy or report.record.package_path is None:
+                    continue
+                self.installer.install(report.record, report.record.package_path)
+            reports = self.status()
+        return reports
 
     def prune_cache(self) -> list[Path]:
         referenced = {

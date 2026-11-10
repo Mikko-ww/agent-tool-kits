@@ -1120,7 +1120,7 @@ git commit -m "实现版本化资产生命周期"
 **Interfaces:**
 - Produces: 第 4 节命令。旧 `apply/import` 命令直接移除，不提供兼容入口。
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 def test_remote_list_does_not_download_packages(cli, fake_lifecycle):
@@ -1158,21 +1158,21 @@ def test_doctor_fix_repairs_package_and_symlink(cli, fake_lifecycle):
     assert fake_lifecycle.repaired_target is not None
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 Run: `uv run pytest tests/test_cli.py -v`
 Expected: FAIL，新命令尚不存在。
 
-- [ ] **Step 3: 实现命令和中文输出**
+- [x] **Step 3: 实现命令和中文输出**
 
 支持交互多选、scope、method、primary/shared 路径摘要和确认；支持 `--no-input`。非交互必须 `--platform`/`--preset`/`--all`。参数错误返回 2，冲突/验证失败返回 1，网络错误返回 3。`status/check/doctor --fix` 均有对应测试。
 
-- [ ] **Step 4: 验证核心测试并确认旧命令移除**
+- [x] **Step 4: 验证核心测试并确认旧命令移除**
 
 Run: `uv run pytest -v && uvx ruff format src tests && uvx ruff check src tests && ! uv run atkits --help | grep -q "apply"`
 Expected: 全部 PASS；帮助中不再出现旧 `apply` 命令。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/atkits/cli.py tests/test_cli.py

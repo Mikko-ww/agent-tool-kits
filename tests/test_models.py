@@ -202,3 +202,7 @@ def test_asset_version_rejects_non_string_description():
             sha256="0" * 64,
             description=123,
         )
+
+
+def test_catalog_names_returns_sorted_asset_names(catalog):
+    assert catalog.names("skill") == ["foo"]

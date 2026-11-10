@@ -130,6 +130,11 @@ class Catalog:
             parsed[str(name)] = {asset.version: asset for asset in assets}
         return parsed
 
+    def names(self, kind: str) -> list[str]:
+        if kind not in ASSET_KINDS:
+            raise RegistryError(f"unsupported asset kind {kind!r}")
+        return sorted(self._assets[kind])
+
     def latest(self, kind: str, name: str) -> AssetVersion:
         versions = self._versions(kind, name)
         stable = [asset for asset in versions.values() if asset.parsed_version.prerelease is None]

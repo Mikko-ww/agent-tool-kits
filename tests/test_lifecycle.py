@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from atkits.lifecycle import InstallConflict, LifecycleError
@@ -111,3 +113,19 @@ def test_prune_cache_removes_unreferenced_package(lifecycle, home):
 def test_uninstall_project_requires_project_root(lifecycle):
     with pytest.raises(LifecycleError):
         lifecycle.uninstall("skill", "foo", scope="project", platform_ids=["codex"])
+
+
+def test_install_editable_uses_source_path(lifecycle, source_repo):
+    result = lifecycle.install_editable(
+        source_repo.skill_path,
+        scope="global",
+        platform_ids=["codex"],
+    )
+    assert result.path == platform_env_global_path(lifecycle, "foo")
+    assert result.targets[0].strategy == "editable"
+    assert result.targets[0].source_path == source_repo.skill_path
+    assert result.targets[0].package_path is None
+
+
+def platform_env_global_path(lifecycle, name: str) -> Path:
+    return Path(lifecycle.env["HOME"]) / ".agents/skills" / name
