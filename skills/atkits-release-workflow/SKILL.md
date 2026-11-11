@@ -1,75 +1,75 @@
 ---
 name: atkits-release-workflow
-description: "Release versioned skills or plugins in the agent-tool-kits repository: bump metadata versions, validate changes, build packages, tag releases, push tags, and verify catalog/CI. Use when the user asks to publish, upgrade, release, or version-bump an asset in this repository; not for general Git or package management."
+description: "在 agent-tool-kits 仓库中发布、升级或 bump 技能/插件版本：确定资产类型、提升 SemVer、运行测试和 lint、打包、打 tag、推送并校验 CI/catalog。适用于本仓库资产的 release/publish/upgrade/version bump/tag；不用于普通 Git 操作或外部技能管理。"
 metadata:
   version: 0.1.0
 ---
 
-# atkits Release Workflow
+# atkits 发布工作流
 
-Use this skill when the user asks to release, publish, upgrade, or version-bump a skill or plugin in this repository.
+当用户要求“发布”“升级版本”“打 tag”“bump 版本”本仓库中的技能或插件时，使用本技能。
 
-## Objective
+## 目标
 
-Produce a verified, tagged release for exactly one asset without touching unrelated files.
+只针对一个资产，产出经过验证、已打 tag 的发布版本，不修改无关文件。
 
-## Preflight
+## 发布前检查
 
-1. Confirm the repository is clean or that only the intended asset is modified.
-2. Identify the asset:
-   - Skill: `skills/<name>/SKILL.md`
-   - Plugin: `plugins/<name>/plugin.yaml`
-3. Read the current version.
-4. Confirm the target version with the user if the bump level is unclear.
-5. Never release a CLI wheel with this skill unless the user explicitly asks for `cli-v<version>`.
+1. 确认仓库是干净的，或只有目标资产发生了修改。
+2. 识别资产类型：
+   - 技能：`skills/<name>/SKILL.md`
+   - 插件：`plugins/<name>/plugin.yaml`
+3. 读取当前版本。
+4. 如果用户没有明确说明升级幅度，先和用户确认目标版本。
+5. 除非用户明确要求发布 `cli-v<version>`，否则不要用本技能发布 CLI wheel。
 
-## Version policy
+## 版本规则
 
-Use SemVer 2.0.0.
+使用 SemVer 2.0.0。
 
-- Fix typo, docs, or small bug → patch
-- Add capability without breaking usage → minor
-- Breaking change or major behavior shift → major
-- Experimental release → prerelease
+- 修复错字、文档或小 bug → patch
+- 新增能力且不破坏现有用法 → minor
+- 破坏性变更或行为大幅改变 → major
+- 试验版本 → prerelease
 
-Do not reuse an existing version.
+不要复用已经存在的版本号。
 
-## Release steps
+## 发布步骤
 
-1. Update only the version field:
-   - Skill: `metadata.version` in `SKILL.md`
-   - Plugin: `version` in `plugin.yaml`
-2. Run:
+1. 只修改版本字段：
+   - 技能：`SKILL.md` 里的 `metadata.version`
+   - 插件：`plugin.yaml` 里的 `version`
+2. 运行：
    ```bash
    uv run pytest
    uvx ruff format src tests scripts
    uvx ruff check src tests scripts
    uv build --quiet
    ```
-3. Build the single asset locally:
+3. 本地打包单个资产：
    ```bash
    uv run python scripts/package_asset.py skill <name> <version> . dist
    ```
-   or:
+   或：
    ```bash
    uv run python scripts/package_asset.py plugin <name> <version> . dist
    ```
-4. Confirm the archive name and SHA-256 file exist.
-5. Create the tag:
+4. 确认压缩包和 `.sha256` 文件都存在。
+5. 创建 tag：
    ```text
    skill-<name>-v<version>
    plugin-<name>-v<version>
    ```
-6. Push the tag only after the user confirms.
-7. Verify GitHub Actions and the resulting Release.
-8. Confirm `catalog.json` was updated by CI.
+6. 只有在用户确认之后，才允许推送 tag。
+7. 检查 GitHub Actions 和生成的 Release。
+8. 确认 CI 已更新 `catalog.json`。
 
-## Hard rules
+## 硬性规则
 
-- Never skip tests or lint.
-- Never publish a changed asset without bumping the version.
-- Never reuse the same version for different content.
-- Never push a tag without explicit user approval.
-- Never modify unrelated files.
-- Never treat external skills as versioned assets in this repository.
-- If any check fails, stop and report the failure; do not continue to tagging.
+- 不许跳过测试或 lint。
+- 不许版本不变就发布新内容。
+- 不许复用同一个版本号发布不同内容。
+- 不许在没有用户确认的情况下推送 tag。
+- 不许修改无关文件。
+- 不许把外部技能当作本仓库的版本化资产处理。
+- 任何检查失败都立即停止并报告，不许继续打 tag。
