@@ -1,11 +1,11 @@
 ---
 name: atkits-release-workflow
-description: "在 agent-tool-kits 仓库中发布、升级或 bump 技能/插件版本：确定资产类型、提升 SemVer、运行测试和 lint、打包、打 tag、推送并校验 CI/catalog。适用于本仓库资产的 release/publish/upgrade/version bump/tag；不用于普通 Git 操作或外部技能管理。"
-metadata:
-  version: 0.1.0
+description: "只在 agent-tool-kits 仓库内使用：发布、升级或 bump 本仓库技能/插件版本，确定资产类型、提升 SemVer、运行测试和 lint、打包、打 tag、推送并校验 CI/catalog。适用于本仓库资产的 release/publish/upgrade/version bump/tag；不用于普通 Git 操作、外部技能或其他仓库。"
 ---
 
-# atkits 发布工作流
+# atkits 项目发布工作流
+
+本技能只服务于 `agent-tool-kits` 这个仓库。它不是通用技能，不进入 Release，不分发到其他机器，也不需要在 `profiles/global.yaml` 里登记。
 
 当用户要求“发布”“升级版本”“打 tag”“bump 版本”本仓库中的技能或插件时，使用本技能。
 

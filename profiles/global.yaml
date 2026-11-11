@@ -4,8 +4,6 @@ type: collection
 assets:
   ai-image-prompt-engineer:
     kind: skill
-  atkits-release-workflow:
-    kind: skill
   searching-github-projects:
     kind: skill
   skill-lookup:
