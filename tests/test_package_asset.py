@@ -131,3 +131,31 @@ def test_generated_catalog_is_parseable(releases, favorites):
     parsed = Catalog(catalog)
     assert parsed.latest("skill", "foo").version == "1.2.0"
     assert parsed.preset("daily-coding").platforms == ("codex", "cursor")
+
+
+def test_build_catalog_ignores_sha256_sidecar_assets():
+    releases = [
+        {
+            "tag_name": "skill-foo-v1.0.0",
+            "assets": [
+                {"id": 1, "name": "foo-1.0.0.tar.gz", "sha256": "0" * 64},
+                {"id": 2, "name": "foo-1.0.0.tar.gz.sha256", "sha256": "1" * 64},
+            ],
+        }
+    ]
+    catalog = build_catalog(releases, {})
+    assert catalog["skills"]["foo"]["versions"]["1.0.0"]["asset_id"] == 1
+
+
+def test_build_catalog_prefers_cli_wheel_over_sdist():
+    releases = [
+        {
+            "tag_name": "cli-v0.2.0",
+            "assets": [
+                {"id": 1, "name": "atkits-0.2.0.tar.gz", "sha256": "0" * 64},
+                {"id": 2, "name": "atkits-0.2.0-py3-none-any.whl", "sha256": "1" * 64},
+            ],
+        }
+    ]
+    catalog = build_catalog(releases, {})
+    assert catalog["cli"]["versions"]["0.2.0"]["asset_id"] == 2

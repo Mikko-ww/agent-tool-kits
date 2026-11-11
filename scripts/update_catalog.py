@@ -74,11 +74,7 @@ def _add_asset_version(
     except ValueError as exc:
         raise CatalogBuildError(f"invalid SemVer in tag {release.get('tag_name')!r}") from exc
     assets = release.get("assets")
-    if not isinstance(assets, list) or len(assets) != 1:
-        raise CatalogBuildError(f"release {name}@{version} must contain exactly one asset")
-    asset = assets[0]
-    if not isinstance(asset, dict):
-        raise CatalogBuildError(f"invalid asset for {name}@{version}")
+    asset = _select_asset(assets, ".tar.gz", f"release {name}@{version}")
     section = catalog["skills"] if kind == "skill" else catalog["plugins"]
     entry = section.setdefault(name, {"latest": None, "versions": {}})
     if version in entry["versions"]:
@@ -97,9 +93,7 @@ def _add_cli_version(catalog: dict[str, Any], version: str, release: dict[str, A
     except ValueError as exc:
         raise CatalogBuildError(f"invalid CLI SemVer {version!r}") from exc
     assets = release.get("assets")
-    if not isinstance(assets, list) or len(assets) != 1:
-        raise CatalogBuildError(f"CLI {version} must contain exactly one wheel asset")
-    asset = assets[0]
+    asset = _select_asset(assets, ".whl", f"CLI {version}")
     if version in catalog["cli"]["versions"]:
         raise CatalogBuildError(f"duplicate CLI version {version}")
     catalog["cli"]["versions"][version] = {
@@ -108,6 +102,19 @@ def _add_cli_version(catalog: dict[str, Any], version: str, release: dict[str, A
         "sha256": _sha256_from_asset(asset),
         "source_revision": release.get("target_commitish"),
     }
+
+
+def _select_asset(assets: Any, suffix: str, context: str) -> dict[str, Any]:
+    if not isinstance(assets, list):
+        raise CatalogBuildError(f"{context} has no asset list")
+    candidates = [
+        asset
+        for asset in assets
+        if isinstance(asset, dict) and str(asset.get("name", "")).endswith(suffix)
+    ]
+    if len(candidates) != 1:
+        raise CatalogBuildError(f"{context} must contain exactly one {suffix} asset")
+    return candidates[0]
 
 
 def _sha256_from_asset(asset: dict[str, Any]) -> Any:
