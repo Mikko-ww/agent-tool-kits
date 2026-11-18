@@ -13,3 +13,5 @@ external_skills:
     source: openai/skills
   playwright:
     source: openai/skills
+  sora:
+    source: openai/skills

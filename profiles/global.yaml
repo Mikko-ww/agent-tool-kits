@@ -10,8 +10,6 @@ assets:
     kind: skill
   skill-smith:
     kind: skill
-  sora:
-    kind: skill
   matt-agent-skills:
     kind: plugin
 
