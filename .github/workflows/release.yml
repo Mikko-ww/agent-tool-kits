@@ -18,8 +18,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --group dev
       - run: uv run pytest -v
-      - run: uvx ruff format --check src tests scripts
-      - run: uvx ruff check src tests scripts
+      - run: uv run ruff format --check src tests scripts
+      - run: uv run ruff check src tests scripts
 
   build:
     needs: test
