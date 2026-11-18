@@ -92,7 +92,17 @@ unzip -p dist/atkits-*.whl atkits/platform_registry.json | python3 -m json.tool 
 4. GitHub Actions 运行测试、打包、发布 Release。
 5. catalog job 串行更新 `registry` Release 中的 `catalog.json`。
 
-## 7. 已知设计取舍
+## 7. 常见问题与经验
+
+处理本仓库任务前，先读同级的 `AGENTS-LESSONS.md`：它集中记录已确认的问题与正确做法（沙箱工具回退、temp_ref 入库规范、打包发布约束、平台安装规则等）。遇到新问题时先报告用户，确认后再沉淀进去，保持条目简短。
+
+内置工作流技能：
+
+- 引入新技能/插件入库：`.agents/skills/atkits-intake-workflow`
+- 发布/升级/打 tag：`.agents/skills/atkits-release-workflow`
+- 复盘并提取经验：`.agents/skills/atkits-lessons-workflow`
+
+## 8. 已知设计取舍
 
 - 外部技能仅作为收藏，安装委托 `npx skills add`，不管理其版本。
 - 项目级更新尚未实现。
