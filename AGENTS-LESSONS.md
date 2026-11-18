@@ -12,6 +12,8 @@
   **正确做法**：改用仓库内 `.venv/bin/python` 执行同一脚本；确需 uv 时再申请提权。
 - **问题**：本机 `git` 命令会输出 `xcrun_db` / `DVTFilePathFSEvents` 警告，看起来像报错。
   **正确做法**：以退出码和实际输出为准，这些警告是噪音，可忽略。
+- **问题**：本地 `uvx ruff` 用缓存旧版本，CI 每次解析最新版；ruff 0.17.5 扩大默认规则集后，本地通过、CI 失败。
+  **正确做法**：lint 工具固定在 dev 依赖（当前 `ruff==0.17.5`），本地与 CI 统一用 `uv run ruff`，不用 `uvx` 裸跑。
 - **问题**：沙箱对 `.git/` 与 `.agents/` 只读，`git checkout/commit` 因无法创建 `index.lock` 失败，`mkdir/cp` 报 `Operation not permitted`。
   **正确做法**：`.git/` 用文件级手动还原，或使用已批准的 `git add` 前缀与 MCP git 工具；`.agents/` 先在 `/private/tmp` 准备好文件，再申请一次提权写入。
 
