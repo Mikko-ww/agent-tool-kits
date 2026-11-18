@@ -2,10 +2,10 @@ import pytest
 
 from atkits.github import (
     GitHubAuthenticationError,
-    GitHubReleaseClient,
     GitHubNotFoundError,
     GitHubPermissionError,
     GitHubRateLimitError,
+    GitHubReleaseClient,
 )
 from atkits.registry import RegistryClient
 

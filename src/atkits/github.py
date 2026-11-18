@@ -40,7 +40,7 @@ class GitHubNetworkError(GitHubError):
 
 
 class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
         request = super().redirect_request(req, fp, code, msg, headers, newurl)
         if request is None:
             return None

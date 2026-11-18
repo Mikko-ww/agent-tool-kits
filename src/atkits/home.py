@@ -21,8 +21,8 @@ class AtkitsHome:
     def discover(
         cls,
         env: Mapping[str, str] | None = None,
-        cwd: Path | None = None,  # noqa: ARG003 - reserved for project-aware discovery
-    ) -> "AtkitsHome":
+        cwd: Path | None = None,
+    ) -> AtkitsHome:
         environment = os.environ if env is None else env
         configured = environment.get("ATKITS_HOME")
         root = Path(configured).expanduser() if configured else Path.home() / ".atkits"
@@ -89,13 +89,13 @@ class AtkitsHome:
         with self.config_path.open("rb") as file_handle:
             data = tomllib.load(file_handle)
         if not isinstance(data, dict):
-            raise ValueError("atkits config must be a TOML table")
+            raise TypeError("atkits config must be a TOML table")
         _reject_token_keys(data)
         return data
 
     def save_config(self, config: Mapping[str, Any]) -> None:
         if not isinstance(config, Mapping):
-            raise ValueError("atkits config must be a mapping")
+            raise TypeError("atkits config must be a mapping")
         _reject_token_keys(config)
         text = _dump_config(config)
         _atomic_write_text(self.config_path, text)

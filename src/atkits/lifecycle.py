@@ -143,12 +143,13 @@ class Lifecycle:
             if existing is not None and existing.version != record.version:
                 existing_consumers = set(existing.consumers)
                 requested_consumers = set(target.consumers)
-                if target.shared or existing.path == record.path:
-                    if not existing_consumers.issubset(requested_consumers):
-                        raise InstallConflict(
-                            f"shared target version mismatch for {name}: "
-                            f"{existing.version} -> {record.version}"
-                        )
+                if (
+                    target.shared or existing.path == record.path
+                ) and not existing_consumers.issubset(requested_consumers):
+                    raise InstallConflict(
+                        f"shared target version mismatch for {name}: "
+                        f"{existing.version} -> {record.version}"
+                    )
             if existing is not None and existing.version != record.version:
                 self.installer.uninstall(existing, existing.consumers)
             installed_record = self.installer.install(record, package_dir)

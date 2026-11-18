@@ -1,6 +1,5 @@
-from pathlib import Path
-
 import dataclasses
+from pathlib import Path
 
 import pytest
 

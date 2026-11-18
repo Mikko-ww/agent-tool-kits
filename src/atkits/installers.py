@@ -7,7 +7,7 @@ import os
 import shutil
 import uuid
 from collections.abc import Iterable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from atkits.home import AtkitsHome
@@ -30,7 +30,7 @@ class BackupStore:
             raise InstallConflict(f"refusing to back up symlink: {path}")
         if not path.exists():
             raise InstallConflict(f"cannot back up missing path: {path}")
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         destination_dir = self.root / f"backup-{stamp}-{uuid.uuid4().hex[:8]}"
         destination_dir.mkdir(parents=True, exist_ok=False)
         destination = destination_dir / path.name

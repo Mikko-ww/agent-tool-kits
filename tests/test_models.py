@@ -53,7 +53,7 @@ def test_catalog_allows_different_prerelease_versions():
             },
         }
     )
-    assert set(catalog.require_version("skill", "foo", "1.0.0-alpha").version for _ in [None]) == {
+    assert {catalog.require_version("skill", "foo", "1.0.0-alpha").version for _ in [None]} == {
         "1.0.0-alpha"
     }
 

@@ -6,7 +6,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -22,7 +22,8 @@ from atkits.models import Catalog, RegistryError
 from atkits.packages import PackageStore
 from atkits.platforms import load_registry
 from atkits.registry import RegistryClient
-from atkits.self_update import SelfUpdateError, self_update as run_self_update
+from atkits.self_update import SelfUpdateError
+from atkits.self_update import self_update as run_self_update
 from atkits.state import StateStore
 
 app = typer.Typer(
@@ -180,15 +181,15 @@ def status() -> None:
 def install(
     name: Annotated[str, typer.Argument(help="资产名，可写 name@version")],
     kind: Annotated[str, typer.Option(help="资产类型：skill/plugin")] = "skill",
-    version: Annotated[Optional[str], typer.Option(help="指定版本")] = None,
+    version: Annotated[str | None, typer.Option(help="指定版本")] = None,
     scope: Annotated[str, typer.Option(help="global/project")] = "global",
-    platform: Annotated[Optional[str], typer.Option(help="平台，逗号分隔")] = None,
+    platform: Annotated[str | None, typer.Option(help="平台，逗号分隔")] = None,
     method: Annotated[str, typer.Option(help="symlink/copy")] = "symlink",
-    preset: Annotated[Optional[str], typer.Option(help="使用 catalog preset")] = None,
+    preset: Annotated[str | None, typer.Option(help="使用 catalog preset")] = None,
     all_platforms: Annotated[bool, typer.Option("--all", help="安装到所有平台")] = False,
     editable: Annotated[bool, typer.Option("--editable", help="链接到本地源码目录")] = False,
     no_input: Annotated[bool, typer.Option("--no-input", help="禁用交互")] = False,
-    project_root: Annotated[Optional[Path], typer.Option(help="项目根目录")] = None,
+    project_root: Annotated[Path | None, typer.Option(help="项目根目录")] = None,
 ) -> None:
     """安装或切换到指定版本。"""
     if "@" in name and version is None:
@@ -281,8 +282,8 @@ def uninstall(
     name: Annotated[str, typer.Argument(help="资产名")],
     kind: Annotated[str, typer.Option(help="资产类型：skill/plugin")] = "skill",
     scope: Annotated[str, typer.Option(help="global/project")] = "global",
-    platform: Annotated[Optional[str], typer.Option(help="平台，逗号分隔")] = None,
-    project_root: Annotated[Optional[Path], typer.Option(help="项目根目录")] = None,
+    platform: Annotated[str | None, typer.Option(help="平台，逗号分隔")] = None,
+    project_root: Annotated[Path | None, typer.Option(help="项目根目录")] = None,
 ) -> None:
     """卸载指定平台上的资产。"""
     platform_ids = _split_platforms(platform)

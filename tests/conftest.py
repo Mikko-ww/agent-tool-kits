@@ -4,20 +4,18 @@ import io
 import json
 import shutil
 import tarfile
+from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
-from collections.abc import Callable
 from types import SimpleNamespace
-from typing import Iterator
 
 import pytest
 
-from atkits.home import AtkitsHome
 from atkits.github import GitHubNetworkError
+from atkits.home import AtkitsHome
 from atkits.models import AssetVersion, Catalog, InstallTarget, RegistryError
-from atkits.packages import PackageError
-from atkits.packages import PackageStore
+from atkits.packages import PackageError, PackageStore
 from atkits.registry import RegistryClient
 
 
@@ -151,7 +149,7 @@ class FakeHTTPServer:
 
 
 class _FakeHTTPHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         server = self.server.fake  # type: ignore[attr-defined]
         headers = {key: value for key, value in self.headers.items()}
         server.requests.append(
