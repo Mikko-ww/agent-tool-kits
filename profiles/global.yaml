@@ -8,6 +8,8 @@ assets:
     kind: skill
   skill-lookup:
     kind: skill
+  skill-smith:
+    kind: skill
   sora:
     kind: skill
   matt-agent-skills:
