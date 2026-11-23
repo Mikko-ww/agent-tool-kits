@@ -16,7 +16,7 @@ from rich.table import Table
 
 from atkits import __version__
 from atkits.external import ExternalError, ExternalInstaller
-from atkits.github import GitHubNetworkError, GitHubReleaseClient
+from atkits.github import GitHubError, GitHubNetworkError, GitHubReleaseClient
 from atkits.home import AtkitsHome
 from atkits.installers import InstallConflict, Installer
 from atkits.lifecycle import Lifecycle, LifecycleError
@@ -378,18 +378,18 @@ def doctor(
 @app.command("self-update")
 def self_update_cmd() -> None:
     """更新 atkits CLI 到最新 wheel。"""
-    runtime = _build_runtime()
-
-    def downloader(asset, destination: Path) -> None:
-        runtime.github.download_asset(asset.asset_id, destination)
-
     try:
+        runtime = _build_runtime()
+
+        def downloader(asset, destination: Path) -> None:
+            runtime.registry.github.download_asset(asset.asset_id, destination)
+
         catalog = runtime.lifecycle.check()
         version = run_self_update(uv_executable="uv", registry=catalog, downloader=downloader)
     except GitHubNetworkError as exc:
         err.print(f"[red]网络错误：[/red]{exc}")
         raise typer.Exit(3) from exc
-    except (SelfUpdateError, RegistryError) as exc:
+    except (SelfUpdateError, LifecycleError, RegistryError, GitHubError) as exc:
         err.print(f"[red]自更新失败：[/red]{exc}")
         raise typer.Exit(1) from exc
     console.print(f"[green]已更新 atkits：[/green]{version}")

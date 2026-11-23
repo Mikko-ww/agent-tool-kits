@@ -1,4 +1,7 @@
+import hashlib
+import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from prompt_toolkit.application import create_app_session
@@ -7,7 +10,9 @@ from prompt_toolkit.output import DummyOutput
 from typer.testing import CliRunner
 
 import atkits.cli as cli_module
+import atkits.self_update as self_update_module
 from atkits.cli import app
+from atkits.github import GitHubReleaseClient
 
 
 @pytest.fixture
@@ -89,7 +94,7 @@ def test_install_reports_unknown_platform_without_installing(cli, fake_lifecycle
     assert fake_lifecycle.package_downloads == 0
 
 
-@pytest.mark.parametrize("command", [["install", "foo"], ["list"]])
+@pytest.mark.parametrize("command", [["install", "foo"], ["list"], ["self-update"]])
 def test_uninitialized_cli_shows_registry_hint(monkeypatch, command):
     def uninitialized():
         raise cli_module.LifecycleError("请先运行 atkits init 配置 registry")
@@ -175,16 +180,52 @@ def test_install_uses_catalog_preset(cli, fake_lifecycle):
     assert fake_lifecycle.last_request["scope"] == "global"
 
 
-def test_self_update_command(cli, fake_runtime, monkeypatch: pytest.MonkeyPatch):
-    from packaging.version import Version
-
+def test_self_update_command_downloads_wheel(home, http_server, monkeypatch: pytest.MonkeyPatch):
+    wheel_name = "atkits-0.2.0-py3-none-any.whl"
+    wheel_bytes = b"test wheel"
+    home.save_config({"registry_repo": "owner/repo"})
+    monkeypatch.setenv("ATKITS_GITHUB_TOKEN", "test-token")
     monkeypatch.setattr(
         cli_module,
-        "run_self_update",
-        lambda uv_executable, *, registry, downloader: Version("0.2.0"),
+        "GitHubReleaseClient",
+        lambda repo, *, token: GitHubReleaseClient(repo, token=token, base_url=http_server.url),
     )
-    result = cli.invoke(app, ["self-update"])
-    assert result.exit_code == 0
+    catalog = {
+        "schema_version": 1,
+        "cli": {
+            "latest": "0.2.0",
+            "versions": {
+                "0.2.0": {
+                    "asset_id": 53,
+                    "archive": wheel_name,
+                    "sha256": hashlib.sha256(wheel_bytes).hexdigest(),
+                }
+            },
+        },
+    }
+    http_server.set_route("/repos/owner/repo/releases/assets/52", 200, json.dumps(catalog).encode())
+    http_server.set_route("/repos/owner/repo/releases/assets/53", 200, wheel_bytes)
+    uv_calls = []
+
+    def fake_uv(command, *, check, capture_output, text):
+        uv_calls.append(command[:4])
+        wheel = Path(command[4])
+        assert wheel.name == wheel_name
+        assert wheel.read_bytes() == wheel_bytes
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(self_update_module, "shutil", SimpleNamespace(which=lambda _name: "uv"))
+    monkeypatch.setattr(self_update_module, "subprocess", SimpleNamespace(run=fake_uv))
+    result = CliRunner().invoke(app, ["self-update"])
+
+    assert result.exit_code == 0, result.exception
+    assert uv_calls == [["uv", "tool", "install", "--force"]]
+    assert [request.path for request in http_server.requests] == [
+        "/repos/owner/repo/releases/tags/registry",
+        "/repos/owner/repo/releases/assets/52",
+        "/repos/owner/repo/releases/assets/53",
+    ]
+    assert http_server.requests[-1].headers["Authorization"] == "Bearer test-token"
     assert "0.2.0" in result.output
 
 
