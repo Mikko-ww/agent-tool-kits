@@ -12,6 +12,8 @@ assets:
     kind: skill
   matt-agent-skills:
     kind: plugin
+  character-design:
+    kind: skill
 
 presets:
   daily-coding:

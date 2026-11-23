@@ -1,0 +1,19 @@
+Create one landscape 16:9 game character design sheet from the supplied full-body illustration. Preserve the character's identity, proportions, silhouette, colors and visible design details. Keep confirmed asymmetric features on their anatomical side. Preserve known counts and allow natural occlusion. Where the reference leaves a surface unseen, continue visible forms without introducing new distinctive features.
+
+Reference observations:
+{REFERENCE_FEATURES}
+
+Left: one large full-body hero illustration in a presentation pose, separate from the technical views. It may retain a held item visible in the reference.
+
+Preserve all confirmed worn accessories in the hero illustration and the technical views, including small items. Match each item's shape, color, relative size, count, and attachment point. Keep asymmetric pieces on the character's own left or right as shown in the reference; do not mirror the design, swap sides, or duplicate items. Allow natural occlusion rather than moving an item to show it.
+
+Right: three full-body orthographic views in the same neutral stance, at the same scale and viewing height, with heads and feet aligned. Keep the hands empty without removing worn accessories. Label the figures in order:
+- Front (0°): straight-on front view, with the entire body facing the viewer.
+- Side (90° from front): strict full-body profile. Show either the character's left side or right side, not both.
+- Back (180° from front): straight-on rear view, with the entire body facing away from the viewer.
+
+For all three technical views, keep the head, torso, pelvis, and feet facing the same direction within each view. No three-quarter views, high or low viewing angles, tilted frames, or independent head turns or body twists.
+
+Use labeled swatches for the visible palette. Enlarge only confirmed details that would be hard to read in the full-body views. If a key handheld item is visible, give it a separate view showing the whole item only if its full form is visible in the reference; otherwise show only the visible portion. Arrange the detail panels to fit their contents.
+
+Keep the background clean and the lighting consistent so the silhouette, colors and labels are easy to read.
