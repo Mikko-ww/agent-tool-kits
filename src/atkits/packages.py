@@ -7,6 +7,7 @@ import json
 import os
 import re
 import tarfile
+import tempfile
 import uuid
 from collections.abc import Callable, Mapping
 from pathlib import Path, PurePosixPath
@@ -27,21 +28,36 @@ class PackageError(ValueError):
 class PackageStore:
     """Download, verify, extract, and cache versioned asset packages."""
 
-    def __init__(self, home: AtkitsHome) -> None:
+    def __init__(
+        self, home: AtkitsHome, *, download_asset: Callable[[int, Path], None] | None = None
+    ) -> None:
         self.home = home
+        self._download_asset = download_asset
 
     def path_for(self, kind: str, name: str, version: str) -> Path:
         kind_dir = "skills" if kind == "skill" else "plugins" if kind == "plugin" else kind
         return self.home.packages_path / kind_dir / name / version
 
-    def ensure(self, asset: AssetVersion, downloader: Callable[[AssetVersion], Path]) -> Path:
+    def ensure(
+        self, asset: AssetVersion, downloader: Callable[[AssetVersion], Path] | None = None
+    ) -> Path:
         destination = self.path_for(asset.kind, asset.name, asset.version)
         if destination.exists():
             if self._cache_is_valid(destination, asset):
                 return destination
             raise PackageError(f"package path already exists: {destination}")
 
-        archive = downloader(asset)
+        if downloader is not None:
+            return self._verify_and_extract(downloader(asset), asset)
+        if self._download_asset is None:
+            raise PackageError("no release package downloader configured")
+        self.home.tmp_path.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="download-", dir=self.home.tmp_path) as temporary:
+            archive = Path(temporary) / "package.tar.gz"
+            self._download_asset(asset.asset_id, archive)
+            return self._verify_and_extract(archive, asset)
+
+    def _verify_and_extract(self, archive: Path, asset: AssetVersion) -> Path:
         actual_hash = sha256_file(archive)
         if actual_hash != asset.sha256:
             raise PackageError(

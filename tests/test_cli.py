@@ -229,6 +229,47 @@ def test_self_update_command_downloads_wheel(home, http_server, monkeypatch: pyt
     assert "0.2.0" in result.output
 
 
+@pytest.mark.parametrize("corrupt", [False, True])
+def test_install_remote_checks_package_before_registering(
+    home, http_server, catalog_data, asset, valid_archive, tmp_path, monkeypatch, corrupt
+):
+    fake_home = tmp_path / "user"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setenv("USERPROFILE", str(fake_home))
+    monkeypatch.setenv("ATKITS_GITHUB_TOKEN", "test-token")
+    monkeypatch.setattr(
+        cli_module,
+        "GitHubReleaseClient",
+        lambda repo, *, token: GitHubReleaseClient(repo, token=token, base_url=http_server.url),
+    )
+    home.save_config({"registry_repo": "owner/repo"})
+    catalog_data["skills"]["foo"]["versions"]["1.1.0"]["sha256"] = asset.sha256
+    catalog_path = "/repos/owner/repo/releases/assets/52"
+    package_path = f"/repos/owner/repo/releases/assets/{asset.asset_id}"
+    http_server.set_route(catalog_path, 200, json.dumps(catalog_data).encode())
+    http_server.set_route(package_path, 200, b"corrupt" if corrupt else valid_archive.read_bytes())
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["install", "foo", "--platform", "codex", "--no-input"])
+    target = fake_home / ".agents" / "skills" / "foo"
+    assert any(request.path == package_path for request in http_server.requests), result.exception
+    if corrupt:
+        assert result.exit_code == 1
+        assert "sha256 mismatch" in result.output
+        assert not target.exists()
+        assert not home.state_path.exists()
+    else:
+        assert result.exit_code == 0, result.exception
+        assert target.is_symlink()
+        assert target.resolve() == (home.packages_path / "skills" / "foo" / "1.1.0").resolve()
+        listing = runner.invoke(app, ["list"])
+        assert listing.exit_code == 0
+        assert "foo" in listing.output
+        assert "1.1.0" in listing.output
+    assert not list(home.tmp_path.glob("download-*"))
+
+
 def test_install_external_skill(cli, fake_runtime, monkeypatch: pytest.MonkeyPatch):
     from atkits.external import ExternalHealth
 

@@ -21,7 +21,7 @@ from atkits.home import AtkitsHome
 from atkits.installers import InstallConflict, Installer
 from atkits.lifecycle import Lifecycle, LifecycleError
 from atkits.models import Catalog, RegistryError
-from atkits.packages import PackageStore
+from atkits.packages import PackageError, PackageStore
 from atkits.platforms import PlatformDefinition, PlatformError, load_registry
 from atkits.registry import RegistryClient
 from atkits.self_update import SelfUpdateError
@@ -84,7 +84,7 @@ def _build_runtime() -> Runtime:
         raise LifecycleError("请先运行 atkits init 配置 registry")
     github = GitHubReleaseClient(repo, token=_token_from_env())
     registry = RegistryClient(home, github)
-    package_store = PackageStore(home)
+    package_store = PackageStore(home, download_asset=github.download_asset)
     installer = Installer(home)
     state = StateStore(home)
     lifecycle = Lifecycle(
@@ -316,7 +316,14 @@ def install(
     except GitHubNetworkError as exc:
         err.print(f"[red]网络错误：[/red]{exc}")
         raise typer.Exit(3) from exc
-    except (LifecycleError, InstallConflict, PlatformError, RegistryError) as exc:
+    except (
+        LifecycleError,
+        InstallConflict,
+        PlatformError,
+        RegistryError,
+        PackageError,
+        GitHubError,
+    ) as exc:
         err.print(f"[red]安装失败：[/red]{exc}")
         raise typer.Exit(1) from exc
     console.print(f"[green]已安装：[/green]{kind} {name} {result.version} -> {_short(result.path)}")
@@ -359,7 +366,7 @@ def update(
     except GitHubNetworkError as exc:
         err.print(f"[red]网络错误：[/red]{exc}")
         raise typer.Exit(3) from exc
-    except (LifecycleError, InstallConflict, RegistryError) as exc:
+    except (LifecycleError, InstallConflict, RegistryError, PackageError, GitHubError) as exc:
         err.print(f"[red]更新失败：[/red]{exc}")
         raise typer.Exit(1) from exc
     console.print(f"[green]已更新：[/green]{kind} {name} -> {result.version}")
