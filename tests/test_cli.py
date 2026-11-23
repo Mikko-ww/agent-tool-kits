@@ -139,6 +139,61 @@ def test_platform_menu_handles_arrow_keys_search_and_empty_selection():
             assert cli_module._prompt_platforms(choices) == ["codex", "claude"]
 
 
+@pytest.mark.parametrize(("keys", "expected"), [(b"\r", "copy"), (b"\x1b[B\r", "symlink")])
+def test_windows_method_menu_defaults_to_copy_but_allows_symlink(keys, expected):
+    with create_pipe_input() as terminal_input:
+        terminal_input.send_bytes(keys + b"\x03")
+        with create_app_session(input=terminal_input, output=DummyOutput()):
+            assert cli_module._prompt_install_method() == expected
+
+
+@pytest.mark.parametrize(
+    ("os_name", "tty", "options", "prompts", "method"),
+    [
+        ("windows", True, [], True, "copy"),
+        ("windows", True, ["--no-input"], False, "symlink"),
+        ("windows", False, [], False, "symlink"),
+        ("windows", True, ["--method", "symlink"], False, "symlink"),
+        ("windows", True, ["--method", "copy"], False, "copy"),
+        ("windows", True, ["--preset", "daily-coding"], False, "symlink"),
+        ("windows", True, ["--preset", "daily-coding", "--method", "copy"], False, "copy"),
+        ("darwin", True, [], False, "symlink"),
+        ("darwin", True, ["--method", "copy"], False, "copy"),
+        ("darwin", True, ["--preset", "daily-coding", "--method", "copy"], False, "symlink"),
+    ],
+)
+def test_install_prompts_for_method_only_on_interactive_windows(
+    cli, fake_lifecycle, monkeypatch, os_name, tty, options, prompts, method
+):
+    calls = []
+
+    def choose():
+        calls.append(True)
+        return "copy"
+
+    monkeypatch.setattr(cli_module, "_current_os_name", lambda: os_name)
+    monkeypatch.setattr(cli_module, "_has_interactive_terminal", lambda: tty)
+    monkeypatch.setattr(cli_module, "_prompt_install_method", choose)
+    result = cli.invoke(app, ["install", "foo", "--platform", "codex", *options])
+    assert result.exit_code == 0, result.exception
+    assert calls == ([True] if prompts else [])
+    assert fake_lifecycle.last_request["method"] == method
+
+
+def test_cancelling_windows_method_menu_does_not_install(cli, fake_lifecycle, monkeypatch):
+    class FakeQuestion:
+        def unsafe_ask(self):
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli_module, "_current_os_name", lambda: "windows")
+    monkeypatch.setattr(cli_module, "_has_interactive_terminal", lambda: True)
+    monkeypatch.setattr(cli_module.questionary, "select", lambda *args, **kwargs: FakeQuestion())
+    result = cli.invoke(app, ["install", "foo", "--platform", "codex"])
+    assert result.exit_code == 130
+    assert "已取消安装" in result.output
+    assert fake_lifecycle.package_downloads == 0
+
+
 def test_install_cancel_does_not_download_package(cli, fake_lifecycle, monkeypatch):
     monkeypatch.setattr(cli_module, "_has_interactive_terminal", lambda: True)
 
@@ -312,9 +367,9 @@ def test_self_update_command_downloads_wheel(home, http_server, monkeypatch: pyt
     assert "0.2.0" in result.output
 
 
-@pytest.mark.parametrize("corrupt", [False, True])
+@pytest.mark.parametrize("mode", ["valid", "corrupt", "winerror_1314"])
 def test_install_remote_checks_package_before_registering(
-    home, http_server, catalog_data, asset, valid_archive, tmp_path, monkeypatch, corrupt
+    home, http_server, catalog_data, asset, valid_archive, tmp_path, monkeypatch, mode
 ):
     fake_home = tmp_path / "user"
     fake_home.mkdir()
@@ -331,17 +386,43 @@ def test_install_remote_checks_package_before_registering(
     catalog_path = "/repos/owner/repo/releases/assets/52"
     package_path = f"/repos/owner/repo/releases/assets/{asset.asset_id}"
     http_server.set_route(catalog_path, 200, json.dumps(catalog_data).encode())
-    http_server.set_route(package_path, 200, b"corrupt" if corrupt else valid_archive.read_bytes())
+    http_server.set_route(
+        package_path, 200, b"corrupt" if mode == "corrupt" else valid_archive.read_bytes()
+    )
+    if mode == "winerror_1314":
+
+        def reject_symlink(*args, **kwargs):
+            error = OSError("A required privilege is not held by the client")
+            error.winerror = 1314
+            raise error
+
+        monkeypatch.setattr(cli_module, "_current_os_name", lambda: "windows")
+        monkeypatch.setattr("atkits.installers.os", SimpleNamespace(symlink=reject_symlink))
 
     runner = CliRunner()
-    result = runner.invoke(app, ["install", "foo", "--platform", "codex", "--no-input"])
+    args = ["install", "foo", "--platform", "codex", "--no-input"]
+    result = runner.invoke(app, args)
     target = fake_home / ".agents" / "skills" / "foo"
     assert any(request.path == package_path for request in http_server.requests), result.exception
-    if corrupt:
+    if mode == "corrupt":
         assert result.exit_code == 1
         assert "sha256 mismatch" in result.output
         assert not target.exists()
         assert not home.state_path.exists()
+    elif mode == "winerror_1314":
+        output = " ".join(Text.from_ansi(result.output).plain.split())
+        assert result.exit_code == 1
+        assert "WinError 1314" in output and "--method copy" in output
+        assert "Traceback" not in output
+        assert not target.exists()
+        assert not home.state_path.exists()
+
+        retry = runner.invoke(app, [*args, "--method", "copy"])
+        assert retry.exit_code == 0, retry.exception
+        assert not target.is_symlink()
+        assert (target / "SKILL.md").is_file()
+        (record,) = json.loads(home.state_path.read_text())["installs"].values()
+        assert record["strategy"] == "copy"
     else:
         assert result.exit_code == 0, result.exception
         assert target.is_symlink()

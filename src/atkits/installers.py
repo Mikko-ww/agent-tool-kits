@@ -114,7 +114,18 @@ class Installer:
             else:
                 raise InstallConflict(f"target is not managed by atkits: {target}")
         target.parent.mkdir(parents=True, exist_ok=True)
-        os.symlink(str(expected), str(target), target_is_directory=True)
+        try:
+            os.symlink(str(expected), str(target), target_is_directory=True)
+        except OSError as exc:
+            if getattr(exc, "winerror", None) != 1314:
+                raise
+            if record.strategy == "editable":
+                hint = "请先取得符号链接权限后重试，或改用发布版并指定 --method copy。"
+            else:
+                hint = "请加上 --method copy 后重试。"
+            raise InstallConflict(
+                f"Windows 创建符号链接权限不足（WinError 1314）。\n{hint}\n目标路径：{target}"
+            ) from exc
 
     def _install_copy(self, record: InstallTarget, package_dir: Path) -> InstallTarget:
         target = record.target_path

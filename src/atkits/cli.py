@@ -140,6 +140,22 @@ def _prompt_platforms(registry: Mapping[str, PlatformDefinition]) -> list[str]:
         raise typer.Exit(130) from None
 
 
+def _prompt_install_method() -> str:
+    try:
+        return questionary.select(
+            "选择安装方式",
+            choices=[
+                questionary.Choice("copy（推荐；不需要创建符号链接的权限）", value="copy"),
+                questionary.Choice("symlink（需要创建符号链接的权限）", value="symlink"),
+            ],
+            default="copy",
+            instruction="↑/↓ 移动 · 回车确认 · Ctrl+C 取消",
+        ).unsafe_ask()
+    except (KeyboardInterrupt, EOFError):
+        typer.echo("已取消安装。", err=True)
+        raise typer.Exit(130) from None
+
+
 def _select_install_platforms(
     platform_ids: list[str] | None, *, no_input: bool, all_platforms: bool
 ) -> list[str]:
@@ -245,7 +261,9 @@ def install(
     version: Annotated[str | None, typer.Option(help="指定版本")] = None,
     scope: Annotated[str, typer.Option(help="global/project")] = "global",
     platform: Annotated[str | None, typer.Option(help="平台，逗号分隔")] = None,
-    method: Annotated[str, typer.Option(help="symlink/copy")] = "symlink",
+    method: Annotated[
+        str | None, typer.Option(help="symlink/copy；默认 symlink，Windows 交互时可选择")
+    ] = None,
     preset: Annotated[str | None, typer.Option(help="使用 catalog preset")] = None,
     all_platforms: Annotated[bool, typer.Option("--all", help="安装到所有平台")] = False,
     editable: Annotated[bool, typer.Option("--editable", help="链接到本地源码目录")] = False,
@@ -256,6 +274,7 @@ def install(
     if "@" in name and version is None:
         name, parsed_version = name.rsplit("@", 1)
         version = parsed_version
+    os_name = _current_os_name()
     platform_ids = _split_platforms(platform)
     try:
         runtime = _build_runtime()
@@ -277,7 +296,8 @@ def install(
             raise typer.Exit(2) from exc
         scope = preset_data.scope
         platform_ids = list(preset_data.platforms)
-        method = preset_data.method
+        if os_name != "windows" or method is None:
+            method = preset_data.method
     try:
         platform_ids = _select_install_platforms(
             platform_ids, no_input=no_input, all_platforms=all_platforms
@@ -292,7 +312,7 @@ def install(
             external = ExternalInstaller(
                 catalog,
                 home,
-                os_name=_current_os_name(),
+                os_name=os_name,
                 env=os.environ,
             ).install(name, platform_ids)
         except (ExternalError, PlatformError) as exc:
@@ -317,6 +337,11 @@ def install(
                 project_root=project_root,
             )
         else:
+            if method is None:
+                if os_name == "windows" and not no_input and _has_interactive_terminal():
+                    method = _prompt_install_method()
+                else:
+                    method = "symlink"
             result = runtime.lifecycle.install(
                 kind,
                 name,

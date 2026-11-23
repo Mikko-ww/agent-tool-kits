@@ -83,7 +83,9 @@ atkits --version
 
 `atkits list` 会把同一资产、同版本且健康状态相同的平台合并显示；版本或状态不同时，分行标明对应平台。用 `--details` 查看各安装路径。
 
-平台菜单显示平台名称和 ID，默认不勾选。可键入名称或 ID 搜索，再用 ↑/↓ 移动、空格勾选、回车确认；按 Ctrl+C 取消。安装范围默认是 `global`，安装方式默认是 `symlink`。
+平台菜单显示平台名称和 ID，默认不勾选。可键入名称或 ID 搜索，再用 ↑/↓ 移动、空格勾选、回车确认；按 Ctrl+C 取消。安装范围默认是 `global`。
+
+Windows 交互安装发布版时，如果没有通过 `--method` 或预设选定安装方式，会显示 `copy` / `symlink` 菜单，推荐并默认选中 `copy`；确认后才执行安装。Windows 下显式提供的 `--method` 可覆盖预设的安装方式。macOS、Linux 和非交互安装的默认方式仍为 `symlink`；`--editable` 仍只使用符号链接，外部技能仍由 `npx skills` 安装。
 
 非交互场景（如管道、CI 或显式指定 `--no-input`）不会打开菜单，必须提供 `--platform`、`--preset` 或 `--all`。例如：
 
@@ -181,7 +183,7 @@ Editable 安装会把平台目录链接到当前工作目录，适合本地开�
 - tar 解包拒绝路径穿越、symlink、hardlink 和设备文件。
 - 真实用户目录替换前进入 `~/.atkits/backup/`。
 - `cache prune` 不清理 backup 和 editable source。
-- Windows symlink 权限不足时不会静默降级为 copy。
+- Windows 创建符号链接如果遇到 `WinError 1314`，会提示使用 `--method copy` 重试，不会自动切换方式。
 
 ## 开发
 

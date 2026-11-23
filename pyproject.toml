@@ -1,6 +1,6 @@
 [project]
 name = "atkits"
-version = "0.1.4"
+version = "0.1.5"
 description = "Distribute agent skills / plugins from one vault onto many agent platforms (Claude Code, Codex, Cursor, OpenCode, pi, ...)."
 readme = "README.md"
 requires-python = ">=3.11"
