@@ -23,3 +23,15 @@ external_skills:
   sora:
     source: openai/skills
     description: 使用 Sora 生成和管理视频
+  diagram-design:
+    source: cathrynlavery/diagram-design
+    description: 绘制架构图、流程图和时序图，支持 HTML、SVG 和 PNG 输出
+  ui-ux-pro-max:
+    source: nextlevelbuilder/ui-ux-pro-max-skill
+    description: 为网站和应用规划配色、字体、布局及组件风格
+  impeccable:
+    source: pbakaus/impeccable
+    description: 评审并打磨现有界面的排版、间距、视觉层级和交互细节
+  canvas-design:
+    source: anthropics/skills
+    description: 设计海报、宣传图等静态视觉作品，输出 PNG 或 PDF
