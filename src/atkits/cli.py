@@ -11,6 +11,7 @@ from typing import Annotated
 
 import questionary
 import typer
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -470,34 +471,64 @@ def platforms() -> None:
 
 
 def _render_remote_catalog(catalog: Catalog) -> None:
-    table = Table(title="远端资产")
-    table.add_column("类型")
-    table.add_column("名称")
-    table.add_column("最新稳定版")
-    table.add_column("简介", max_width=48, overflow="fold")
-    for kind in ("skill", "plugin", "cli"):
-        for name in catalog.names(kind):
+    tables: list[Table] = []
+    for kind, title in (
+        ("skill", "自有技能"),
+        ("plugin", "插件"),
+        ("external", "外部技能收藏"),
+        ("cli", "CLI 工具"),
+    ):
+        if kind == "external":
+            external = catalog.external_skills()
+            if external:
+                table = _remote_table(title, len(external), "来源仓库", "简介")
+                for name, entry in external.items():
+                    table.add_row(
+                        name, Text(str(entry["source"])), _summary_text(entry.get("description"))
+                    )
+                tables.append(table)
+            continue
+
+        names = catalog.names(kind)
+        if not names:
+            continue
+        table = _remote_table(title, len(names), "最新稳定版", "简介")
+        for name in names:
             latest = catalog.latest(kind, name)
-            table.add_row(kind, name, latest.version, _summary_text(latest.description))
-    for name, entry in catalog.external_skills().items():
-        source = entry.get("source", "-")
-        table.add_row("external", name, str(source), _summary_text(entry.get("description")))
-    console.print(table)
+            table.add_row(name, latest.version, _summary_text(latest.description))
+        tables.append(table)
+
     presets = catalog.presets()
     if presets:
-        preset_table = Table(title="远端 presets")
-        preset_table.add_column("名称")
-        preset_table.add_column("范围")
-        preset_table.add_column("平台")
-        preset_table.add_column("方法")
+        table = _remote_table("安装预设", len(presets), "范围", "平台", "方法")
         for preset in presets.values():
-            preset_table.add_row(
+            table.add_row(
                 preset.name,
                 preset.scope,
                 ",".join(normalize_platform_ids(preset.platforms)),
                 preset.method,
             )
-        console.print(preset_table)
+        tables.append(table)
+
+    console.print("远端目录", style="bold")
+    if not tables:
+        console.print("暂无远端条目", style="dim")
+    for table in tables:
+        console.print()
+        console.print(table)
+
+
+def _remote_table(title: str, count: int, *headers: str) -> Table:
+    table = Table(
+        title=f"{title}（{count}）",
+        title_justify="left",
+        title_style="bold cyan",
+        box=box.ROUNDED,
+    )
+    table.add_column("名称", style="bold", overflow="fold")
+    for header in headers:
+        table.add_column(header, max_width=58 if header == "简介" else None, overflow="fold")
+    return table
 
 
 def _summary_text(value: object) -> Text:

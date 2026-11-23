@@ -57,7 +57,7 @@ atkits init --registry Mikko-ww/agent-tool-kits
 ## 日常命令
 
 ```bash
-atkits list --remote          # 列出远端 Skill / Plugin / CLI / 外部收藏及简介，以及 preset
+atkits list --remote          # 分组查看远端自有技能、插件、CLI、外部技能收藏和安装预设
 atkits list                   # 按资产汇总本机安装
 atkits list --details         # 查看每个安装路径的明细
 atkits check                  # 强制刷新 catalog

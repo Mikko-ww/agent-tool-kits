@@ -16,6 +16,7 @@ import atkits.self_update as self_update_module
 from atkits.cli import app
 from atkits.github import GitHubReleaseClient
 from atkits.lifecycle import StatusReport
+from atkits.models import Catalog
 
 
 @pytest.fixture
@@ -24,24 +25,67 @@ def cli(monkeypatch: pytest.MonkeyPatch, fake_runtime) -> CliRunner:
     return CliRunner()
 
 
-def test_remote_list_does_not_download_packages(cli, fake_lifecycle):
-    fake_lifecycle.catalog_data["skills"]["foo"]["description"] = "测试 [插件] 简介"
-    fake_lifecycle.catalog_data["external_skills"].update(
+def test_remote_list_groups_categories_without_downloading_packages(cli, fake_lifecycle):
+    data = fake_lifecycle.catalog_data
+    foo = data["skills"]["foo"]
+    foo["description"] = "测试 [插件] 简介"
+    version = foo["versions"]["1.1.0"]
+    data["plugins"] = {"example-plugin": {"versions": {"1.1.0": version}}}
+    data["cli"] = {"versions": {"1.1.0": version}}
+    data["external_skills"].update(
         {
             "pdf": {"source": "openai/skills", "description": "处理 PDF"},
             "other": {"source": "example/skills"},
         }
     )
-    result = cli.invoke(app, ["list", "--remote"])
+    result = cli.invoke(app, ["list", "--remote"], env={"NO_COLOR": "1", "COLUMNS": "100"})
     assert result.exit_code == 0
     output = Text.from_ansi(result.output).plain
-    assert "简介" in output
-    rows = _table_rows(output)
-    assert ["skill", "foo", "1.1.0", "测试 [插件] 简介"] in rows
-    assert ["external", "pdf", "openai/skills", "处理 PDF"] in rows
-    assert ["external", "other", "example/skills", "—"] in rows
-    assert "daily-coding" in result.output
+    headings = ["自有技能（1）", "插件（1）", "外部技能收藏（2）", "CLI 工具（1）", "安装预设（1）"]
+    starts = [output.index(f"\n{heading}") for heading in headings]
+    assert starts == sorted(starts)
+    skills, plugins, external, tools, presets = [
+        output[start:end] for start, end in zip(starts, [*starts[1:], len(output)])
+    ]
+    assert "类型" not in output
+    version_header = ["名称", "最新稳定版", "简介"]
+    assert _table_rows(skills) == [version_header, ["foo", "1.1.0", "测试 [插件] 简介"]]
+    assert _table_rows(plugins) == [version_header, ["example-plugin", "1.1.0", "—"]]
+    assert _table_rows(external) == [
+        ["名称", "来源仓库", "简介"],
+        ["pdf", "openai/skills", "处理 PDF"],
+        ["other", "example/skills", "—"],
+    ]
+    assert _table_rows(tools) == [version_header, ["atkits", "1.1.0", "—"]]
+    assert "daily-coding" in presets
     assert fake_lifecycle.package_downloads == 0
+
+
+def test_remote_list_wraps_source_and_description_in_narrow_terminal(cli, fake_lifecycle):
+    source = "nextlevelbuilder/ui-ux-pro-max-skill"
+    description = "规划产品界面的排版、间距、视觉层级和交互细节，提供完整设计建议"
+    fake_lifecycle.catalog_data["external_skills"] = {
+        "ui-ux-pro-max": {"source": source, "description": description}
+    }
+    result = cli.invoke(app, ["list", "--remote"], env={"NO_COLOR": "1", "COLUMNS": "64"})
+    assert result.exit_code == 0
+    output = Text.from_ansi(result.output).plain
+    external = output.split("外部技能收藏（1）")[1].split("安装预设（1）")[0]
+    rows = _table_rows(external)[1:]
+    assert len(rows) > 1
+    assert ["".join(row[i] for row in rows) for i in range(3)] == [
+        "ui-ux-pro-max",
+        source,
+        description,
+    ]
+
+
+def test_remote_list_has_empty_state(cli, fake_lifecycle, monkeypatch):
+    monkeypatch.setattr(fake_lifecycle, "check", lambda: Catalog({"schema_version": 1}))
+    result = cli.invoke(app, ["list", "--remote"])
+    assert result.exit_code == 0
+    assert "暂无远端条目" in result.output
+    assert "外部技能收藏" not in result.output
 
 
 def _table_rows(output):
