@@ -63,18 +63,4 @@ jobs:
 
   catalog:
     needs: publish
-    runs-on: ubuntu-latest
-    concurrency:
-      group: catalog
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group dev
-      - env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api repos/${GITHUB_REPOSITORY}/releases --paginate > /tmp/releases.json
-          uv run python scripts/update_catalog.py /tmp/releases.json favorites.yaml profiles/global.yaml catalog.json
-          gh release view registry || gh release create registry
-          gh release upload registry catalog.json --clobber
+    uses: ./.github/workflows/refresh-catalog.yml

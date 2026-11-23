@@ -154,6 +154,8 @@ external_skills:
 安装时 `atkits` 委托 `npx skills add`，但安装后必须验证目标目录存在 `SKILL.md`。
 外部技能不进入本仓库，不参与版本管理。
 
+`favorites.yaml` 的改动推送或合并到 `main` 后，GitHub Actions 的 **Refresh Catalog** 工作流会自动重建远端 `catalog.json`。等工作流通过后，用 `atkits list --remote` 查看新收藏；不需要打标签或升级 CLI。版本发布成功后也调用同一个刷新任务。
+
 ## Editable 开发安装
 
 ```bash

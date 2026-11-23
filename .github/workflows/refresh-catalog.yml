@@ -1,0 +1,34 @@
+name: Refresh Catalog
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - favorites.yaml
+      - .github/workflows/refresh-catalog.yml
+  workflow_call:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: catalog
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+      - name: Rebuild and upload catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --slurp > "$RUNNER_TEMP/release-pages.json"
+          jq -e 'add // []' "$RUNNER_TEMP/release-pages.json" > "$RUNNER_TEMP/releases.json"
+          uv run --locked python scripts/update_catalog.py "$RUNNER_TEMP/releases.json" favorites.yaml profiles/global.yaml "$RUNNER_TEMP/catalog.json"
+          gh release view registry || gh release create registry
+          gh release upload registry "$RUNNER_TEMP/catalog.json" --clobber
