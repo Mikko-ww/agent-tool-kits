@@ -8,6 +8,7 @@ import pytest
 from prompt_toolkit.application import create_app_session
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output import DummyOutput
+from rich.text import Text
 from typer.testing import CliRunner
 
 import atkits.cli as cli_module
@@ -88,9 +89,14 @@ def test_list_keeps_distinct_versions_and_broken_targets_visible(
 
 
 def test_list_details_cannot_be_used_for_remote_catalog(cli):
-    result = cli.invoke(app, ["list", "--remote", "--details"], env={"COLUMNS": "120"})
+    result = cli.invoke(
+        app,
+        ["list", "--remote", "--details"],
+        env={"COLUMNS": "120", "FORCE_COLOR": "1"},
+        color=True,
+    )
     assert result.exit_code == 2
-    assert "不能与 --remote 同用" in result.output
+    assert "不能与 --remote 同用" in Text.from_ansi(result.output).plain
 
 
 def test_install_requires_explicit_platform_with_no_input(cli, fake_lifecycle):
