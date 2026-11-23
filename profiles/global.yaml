@@ -4,16 +4,25 @@ type: collection
 assets:
   ai-image-prompt-engineer:
     kind: skill
+    description: 编写和优化 AI 生图提示词
   searching-github-projects:
     kind: skill
+    description: 搜索、筛选并比较 GitHub 项目
   skill-lookup:
     kind: skill
+    description: 查找、获取和安装 Agent 技能
   skill-smith:
     kind: skill
+    description: 创建、校验、打包和安装 Agent 技能
   matt-agent-skills:
     kind: plugin
+    description: Matt Pocock 的 Agent 技能合集
   character-design:
     kind: skill
+    description: 从角色立绘生成设定板，含正侧背三视图
+  atkits:
+    kind: cli
+    description: 跨平台安装和管理 Agent 技能与插件
 
 presets:
   daily-coding:

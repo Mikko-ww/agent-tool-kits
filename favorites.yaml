@@ -1,17 +1,25 @@
 external_skills:
   find-skills:
     source: vercel-labs/skills
+    description: 发现和安装可复用的 Agent 技能
   mcp-builder:
     source: anthropics/skills
+    description: 构建 MCP 服务，接入外部服务和 API
   skill-creator:
     source: anthropics/skills
+    description: 创建、改进和评估 Agent 技能
   frontend-design:
     source: anthropics/skills
+    description: 设计和实现有辨识度的前端界面
   figma-use:
     source: openai/skills
+    description: 读取和编辑 Figma 设计文件
   pdf:
     source: openai/skills
+    description: 读取、生成和检查 PDF 文档
   playwright:
     source: openai/skills
+    description: 自动化浏览器操作和网页测试
   sora:
     source: openai/skills
+    description: 使用 Sora 生成和管理视频

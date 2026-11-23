@@ -133,6 +133,32 @@ def test_generated_catalog_is_parseable(releases, favorites):
     assert parsed.preset("daily-coding").platforms == ("codex", "cursor")
 
 
+def test_catalog_adds_descriptions_only_to_published_assets(releases, favorites):
+    from atkits.models import Catalog
+
+    releases.append(
+        {
+            "tag_name": "cli-v0.2.0",
+            "assets": [{"id": 9, "name": "atkits-0.2.0-py3-none-any.whl", "sha256": "4" * 64}],
+        }
+    )
+    favorites["external_skills"]["pdf"]["description"] = "处理 PDF"
+    collection = {
+        "assets": {
+            "foo": {"kind": "skill", "description": "技能简介"},
+            "bar": {"kind": "plugin", "description": "插件简介"},
+            "atkits": {"kind": "cli", "description": "CLI 简介"},
+            "unreleased": {"kind": "skill", "description": "尚未发布"},
+        }
+    }
+    parsed = Catalog(build_catalog(releases, favorites, collection))
+    assert parsed.latest("skill", "foo").description == "技能简介"
+    assert parsed.latest("plugin", "bar").description == "插件简介"
+    assert parsed.latest("cli", "atkits").description == "CLI 简介"
+    assert parsed.external_skills()["pdf"]["description"] == "处理 PDF"
+    assert parsed.names("skill") == ["foo"]
+
+
 def test_build_catalog_ignores_sha256_sidecar_assets():
     releases = [
         {

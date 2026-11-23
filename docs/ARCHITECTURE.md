@@ -45,6 +45,7 @@
 - `latest` 按 SemVer precedence 计算，不按上传时间。
 - 预发布版本不进入默认 latest。
 - `collection.presets` 来自 `profiles/global.yaml`。
+- 远端清单的简介为可选字段：自有资产来自 `profiles/global.yaml` 中的 `assets.<name>.description`，外部收藏来自 `favorites.yaml` 对应条目。旧 catalog 缺少简介时显示「—」。
 - `external_skills` 来自 `favorites.yaml`。
 
 ## 3. 本地模型

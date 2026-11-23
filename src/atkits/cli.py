@@ -13,6 +13,7 @@ import questionary
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 from atkits import __version__
 from atkits.external import ExternalError, ExternalInstaller
@@ -473,13 +474,14 @@ def _render_remote_catalog(catalog: Catalog) -> None:
     table.add_column("类型")
     table.add_column("名称")
     table.add_column("最新稳定版")
+    table.add_column("简介", max_width=48, overflow="fold")
     for kind in ("skill", "plugin", "cli"):
         for name in catalog.names(kind):
             latest = catalog.latest(kind, name)
-            table.add_row(kind, name, latest.version)
+            table.add_row(kind, name, latest.version, _summary_text(latest.description))
     for name, entry in catalog.external_skills().items():
         source = entry.get("source", "-")
-        table.add_row("external", name, str(source))
+        table.add_row("external", name, str(source), _summary_text(entry.get("description")))
     console.print(table)
     presets = catalog.presets()
     if presets:
@@ -496,6 +498,11 @@ def _render_remote_catalog(catalog: Catalog) -> None:
                 preset.method,
             )
         console.print(preset_table)
+
+
+def _summary_text(value: object) -> Text:
+    summary = " ".join(value.split()) if isinstance(value, str) else ""
+    return Text(summary or "—")
 
 
 def _status_label(healthy: bool) -> str:

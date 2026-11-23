@@ -41,8 +41,11 @@ description: "只在 agent-tool-kits 仓库内使用：把 temp_ref 里引入的
 6. **与本仓库规范的差异**：
    - frontmatter 只保留 `name`、`description`、`metadata.version`，多余字段（如 `compatibility`、`author`）列为待清理项。
    - 面向人的文案应为中文；代码、标识符、机器值保持英文。
+7. **远端清单简介**：
+   - 新增技能从原始 `SKILL.md` 的 `description` 提炼一句简体中文简介，必要时核对正文；插件从原始 `plugin.yaml` 的说明提炼。
+   - 简介只写已核实的核心用途，不替换技能的触发描述。无法核实用途时，先询问用户，不凭名称猜测或登记未经确认的简介。
 
-审查报告包含：结论（可入库 / 需修改 / 需重做）、问题分级 P1/P2/P3、拟执行的文件改动清单。
+审查报告包含：结论（可入库 / 需修改 / 需重做）、问题分级 P1/P2/P3、拟执行的文件改动清单、拟登记的简介与出处（原始文件路径或链接及对应字段/章节）。
 
 ## 入库步骤
 
@@ -56,8 +59,9 @@ description: "只在 agent-tool-kits 仓库内使用：把 temp_ref 里引入的
    ```yaml
    <name>:
      kind: skill
+     description: 述明核心用途的一句简体中文
    ```
-   或 `kind: plugin`。项目内部工作流技能（`.agents/skills/atkits-*`）不注册。
+   插件使用 `kind: plugin`。简介填写审查时确认的文案。项目内部工作流技能（`.agents/skills/atkits-*`）不注册。
 5. 本地验证：
    ```bash
    .venv/bin/python scripts/package_asset.py skill <name> 0.1.0 . dist

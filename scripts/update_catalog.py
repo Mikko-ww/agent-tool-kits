@@ -58,12 +58,33 @@ def build_catalog(
         catalog["external_skills"] = external
     presets = favorites.get("presets")
     if collection is not None:
+        _add_descriptions(catalog, collection.get("assets"))
         collection_presets = collection.get("presets")
         if isinstance(collection_presets, dict):
             presets = collection_presets
     if isinstance(presets, dict):
         catalog["collection"]["presets"] = presets
     return catalog
+
+
+def _add_descriptions(catalog: dict[str, Any], entries: Any) -> None:
+    if not isinstance(entries, dict):
+        return
+    for name, metadata in entries.items():
+        if not isinstance(metadata, dict):
+            continue
+        description = metadata.get("description")
+        if not isinstance(description, str) or not description.strip():
+            continue
+        kind = metadata.get("kind")
+        if kind == "cli" and name == "atkits" and catalog["cli"]["versions"]:
+            entry = catalog["cli"]
+        elif kind in ("skill", "plugin"):
+            entry = catalog[f"{kind}s"].get(name)
+        else:
+            continue
+        if entry is not None:
+            entry["description"] = description.strip()
 
 
 def _add_asset_version(

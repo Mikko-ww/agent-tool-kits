@@ -127,6 +127,7 @@ class Catalog:
             versions = raw_versions.get("versions")
             if not isinstance(versions, Mapping) or not versions:
                 raise RegistryError(f"{kind} {name}: versions must be a non-empty mapping")
+            description = _optional_str(f"{kind} {name}", raw_versions, "description")
             assets: list[AssetVersion] = []
             for version, raw in versions.items():
                 if not isinstance(raw, Mapping):
@@ -141,7 +142,7 @@ class Catalog:
                         archive=_required_str(context, raw, "archive"),
                         sha256=_required_str(context, raw, "sha256"),
                         source_revision=_optional_str(context, raw, "source_revision"),
-                        description=_optional_str(context, raw, "description"),
+                        description=_optional_str(context, raw, "description") or description,
                     )
                 )
             _reject_duplicate_precedence(name, assets)

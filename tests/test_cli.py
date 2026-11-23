@@ -25,15 +25,26 @@ def cli(monkeypatch: pytest.MonkeyPatch, fake_runtime) -> CliRunner:
 
 
 def test_remote_list_does_not_download_packages(cli, fake_lifecycle):
+    fake_lifecycle.catalog_data["skills"]["foo"]["description"] = "测试 [插件] 简介"
+    fake_lifecycle.catalog_data["external_skills"].update(
+        {
+            "pdf": {"source": "openai/skills", "description": "处理 PDF"},
+            "other": {"source": "example/skills"},
+        }
+    )
     result = cli.invoke(app, ["list", "--remote"])
     assert result.exit_code == 0
-    assert "foo" in result.output
-    assert "pdf" in result.output
+    output = Text.from_ansi(result.output).plain
+    assert "简介" in output
+    rows = _table_rows(output)
+    assert ["skill", "foo", "1.1.0", "测试 [插件] 简介"] in rows
+    assert ["external", "pdf", "openai/skills", "处理 PDF"] in rows
+    assert ["external", "other", "example/skills", "—"] in rows
     assert "daily-coding" in result.output
     assert fake_lifecycle.package_downloads == 0
 
 
-def _local_install_rows(output):
+def _table_rows(output):
     return [
         [cell.strip() for cell in line.split("│")[1:-1]]
         for line in output.splitlines()
@@ -58,11 +69,11 @@ def test_list_groups_matching_installs_and_keeps_path_details(
 
     summary = cli.invoke(app, ["list"], env=env)
     assert summary.exit_code == 0, summary.exception
-    assert _local_install_rows(summary.output) == [["skill", "foo", "1.1.0", "codex, claude", "ok"]]
+    assert _table_rows(summary.output) == [["skill", "foo", "1.1.0", "codex, claude", "ok"]]
 
     details = cli.invoke(app, ["list", "--details"], env=env)
     assert details.exit_code == 0, details.exception
-    assert _local_install_rows(details.output) == [
+    assert _table_rows(details.output) == [
         ["skill", "foo", "1.1.0", str(record.path), record.consumers[0], "ok"]
         for record in (codex, claude, project)
     ]
@@ -80,7 +91,7 @@ def test_list_keeps_distinct_versions_and_broken_targets_visible(
     monkeypatch.setattr(fake_lifecycle, "status", lambda: reports)
     result = cli.invoke(app, ["list"], env={"COLUMNS": "120"})
     assert result.exit_code == 0, result.exception
-    assert _local_install_rows(result.output) == [
+    assert _table_rows(result.output) == [
         ["skill", "foo", "1.1.0", "codex, cursor", "ok"],
         ["skill", "foo", "1.1.0", "claude", "broken"],
         ["skill", "foo", "1.0.0", "claude", "ok"],

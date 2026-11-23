@@ -57,7 +57,7 @@ atkits init --registry Mikko-ww/agent-tool-kits
 ## 日常命令
 
 ```bash
-atkits list --remote          # 列出远端 Skill / Plugin / CLI / 外部收藏 / preset
+atkits list --remote          # 列出远端 Skill / Plugin / CLI / 外部收藏及简介，以及 preset
 atkits list                   # 按资产汇总本机安装
 atkits list --details         # 查看每个安装路径的明细
 atkits check                  # 强制刷新 catalog
@@ -144,7 +144,12 @@ Codex 的全局用户目录是：
 external_skills:
   pdf:
     source: openai/skills
+    description: 读取、生成和检查 PDF 文档
 ```
+
+新增收藏时，优先从上游对应技能的 `SKILL.md` 的 `description` 提炼一句简体中文简介；必要时核对正文，没有 `SKILL.md` 时查阅该技能的 README 或官方说明，不用整个仓库的介绍代替。简介只写已核实的核心用途。
+
+审查时列出拟登记的简介和出处（原文链接及对应字段或章节）；无法核实时，先询问用户，不凭名称猜测。确认后将简介写入 `external_skills.<name>.description`。旧 catalog 缺少简介时，`atkits list --remote` 显示「—」，不会在列出时临时抓取上游。
 
 安装时 `atkits` 委托 `npx skills add`，但安装后必须验证目标目录存在 `SKILL.md`。
 外部技能不进入本仓库，不参与版本管理。
