@@ -1,6 +1,9 @@
 from pathlib import Path
 
 import pytest
+from prompt_toolkit.application import create_app_session
+from prompt_toolkit.input import create_pipe_input
+from prompt_toolkit.output import DummyOutput
 from typer.testing import CliRunner
 
 import atkits.cli as cli_module
@@ -26,6 +29,76 @@ def test_install_requires_explicit_platform_with_no_input(cli, fake_lifecycle):
     result = cli.invoke(app, ["install", "foo", "--no-input"])
     assert result.exit_code == 2
     assert "platform" in result.output
+
+
+def test_install_without_terminal_does_not_prompt(cli, fake_lifecycle):
+    result = cli.invoke(app, ["install", "foo"])
+    assert result.exit_code == 2
+    assert "非交互安装" in result.output
+    assert "--platform" in result.output
+    assert fake_lifecycle.package_downloads == 0
+
+
+def test_install_interactively_passes_selected_platforms(cli, fake_lifecycle, monkeypatch):
+    monkeypatch.setattr(cli_module, "_has_interactive_terminal", lambda: True)
+
+    def choose(registry):
+        assert registry["codex"].display_name == "Codex"
+        assert registry["claude-code"].display_name == "Claude Code"
+        return ["codex", "claude-code"]
+
+    monkeypatch.setattr(cli_module, "_prompt_platforms", choose)
+    result = cli.invoke(app, ["install", "foo"])
+    assert result.exit_code == 0
+    assert fake_lifecycle.last_request["platform_ids"] == ["codex", "claude-code"]
+    assert fake_lifecycle.last_request["scope"] == "global"
+    assert fake_lifecycle.last_request["method"] == "symlink"
+
+
+def test_platform_menu_handles_arrow_keys_search_and_empty_selection():
+    registry = cli_module.load_registry()
+    choices = {key: registry[key] for key in ("codex", "claude-code")}
+    with create_pipe_input() as terminal_input:
+        # Submit empty, move down and back up, select Codex, then search and select Claude Code.
+        terminal_input.send_bytes(b"\r\x1b[C\x1b[D\x1b[B\x1b[A claude \r\x03")
+        with create_app_session(input=terminal_input, output=DummyOutput()):
+            assert cli_module._prompt_platforms(choices) == ["codex", "claude-code"]
+
+
+def test_install_cancel_does_not_download_package(cli, fake_lifecycle, monkeypatch):
+    monkeypatch.setattr(cli_module, "_has_interactive_terminal", lambda: True)
+
+    class FakeQuestion:
+        def unsafe_ask(self):
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli_module.questionary, "checkbox", lambda *args, **kwargs: FakeQuestion())
+    result = cli.invoke(app, ["install", "foo"])
+    assert result.exit_code == 130
+    assert "已取消安装" in result.output
+    assert fake_lifecycle.package_downloads == 0
+
+
+def test_install_reports_unknown_platform_without_installing(cli, fake_lifecycle):
+    result = cli.invoke(app, ["install", "foo", "--platform", "codex,claude", "--no-input"])
+    assert result.exit_code == 2
+    assert "未知平台" in result.output
+    assert "'claude'" in result.output
+    assert "claude-code" in result.output
+    assert "Traceback" not in result.output
+    assert fake_lifecycle.package_downloads == 0
+
+
+@pytest.mark.parametrize("command", [["install", "foo"], ["list"]])
+def test_uninitialized_cli_shows_registry_hint(monkeypatch, command):
+    def uninitialized():
+        raise cli_module.LifecycleError("请先运行 atkits init 配置 registry")
+
+    monkeypatch.setattr(cli_module, "_build_runtime", uninitialized)
+    result = CliRunner().invoke(app, command)
+    assert result.exit_code == 1
+    assert "请先运行 atkits init" in result.output
+    assert "Traceback" not in result.output
 
 
 def test_install_specific_version_and_platforms(cli, fake_lifecycle):

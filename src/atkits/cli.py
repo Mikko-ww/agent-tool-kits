@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
+import questionary
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -20,7 +22,7 @@ from atkits.installers import InstallConflict, Installer
 from atkits.lifecycle import Lifecycle, LifecycleError
 from atkits.models import Catalog, RegistryError
 from atkits.packages import PackageStore
-from atkits.platforms import load_registry
+from atkits.platforms import PlatformDefinition, PlatformError, load_registry
 from atkits.registry import RegistryClient
 from atkits.self_update import SelfUpdateError
 from atkits.self_update import self_update as run_self_update
@@ -109,6 +111,52 @@ def _split_platforms(value: str | None) -> list[str] | None:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _has_interactive_terminal() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty() and os.environ.get("TERM") != "dumb"
+
+
+def _prompt_platforms(registry: Mapping[str, PlatformDefinition]) -> list[str]:
+    choices = [
+        questionary.Choice(f"{definition.display_name} ({platform_id})", value=platform_id)
+        for platform_id, definition in registry.items()
+    ]
+    try:
+        return questionary.checkbox(
+            "选择安装平台（至少一项）",
+            choices=choices,
+            instruction="键入名称或 ID 搜索 · ↑/↓ 移动 · 空格勾选 · 回车确认 · Ctrl+C 取消",
+            validate=lambda values: bool(values) or "请至少选择一个平台",
+            use_jk_keys=False,
+            use_emacs_keys=False,
+            use_search_filter=True,
+        ).unsafe_ask()
+    except (KeyboardInterrupt, EOFError):
+        typer.echo("已取消安装。", err=True)
+        raise typer.Exit(130) from None
+
+
+def _select_install_platforms(
+    platform_ids: list[str] | None, *, no_input: bool, all_platforms: bool
+) -> list[str]:
+    registry = load_registry()
+    if all_platforms:
+        platform_ids = sorted(registry)
+    if not platform_ids:
+        if no_input or not _has_interactive_terminal():
+            typer.echo("非交互安装需要提供 --platform、--preset 或 --all。", err=True)
+            raise typer.Exit(2)
+        if not registry:
+            raise PlatformError("平台注册表没有可选平台")
+        platform_ids = _prompt_platforms(registry)
+
+    unknown = list(dict.fromkeys(item for item in platform_ids if item not in registry))
+    if unknown:
+        typer.echo("未知平台：" + "、".join(map(repr, unknown)), err=True)
+        typer.echo("可用平台 ID：" + ", ".join(registry), err=True)
+        raise typer.Exit(2)
+    return platform_ids
+
+
 def _catalog_for_runtime(runtime: Runtime) -> Catalog:
     try:
         return runtime.registry.cached()
@@ -138,8 +186,8 @@ def list_cmd(
     remote: Annotated[bool, typer.Option("--remote", help="列出远端资产")] = False,
 ) -> None:
     """列出版本化资产。"""
-    runtime = _build_runtime()
     try:
+        runtime = _build_runtime()
         if remote:
             catalog = runtime.lifecycle.check()
             _render_remote_catalog(catalog)
@@ -196,33 +244,15 @@ def install(
         name, parsed_version = name.rsplit("@", 1)
         version = parsed_version
     platform_ids = _split_platforms(platform)
-    runtime = _build_runtime()
     try:
+        runtime = _build_runtime()
         catalog = _catalog_for_runtime(runtime)
     except GitHubNetworkError as exc:
         err.print(f"[red]网络错误：[/red]{exc}")
         raise typer.Exit(3) from exc
-    except RegistryError as exc:
+    except (LifecycleError, RegistryError) as exc:
         err.print(f"[red]catalog 错误：[/red]{exc}")
         raise typer.Exit(1) from exc
-    if not editable and name in catalog.external_skills():
-        home = runtime.home.path if hasattr(runtime.home, "path") else runtime.home
-        try:
-            external = ExternalInstaller(
-                catalog,
-                home,
-                os_name=_current_os_name(),
-                env=os.environ,
-            ).install(name, platform_ids or [])
-        except ExternalError as exc:
-            err.print(f"[red]外部技能安装失败：[/red]{exc}")
-            raise typer.Exit(1) from exc
-        console.print(
-            f"[green]已安装外部技能：[/green]{name} -> {_short(external.path)}"
-            if external.path
-            else f"[green]已安装外部技能：[/green]{name}"
-        )
-        return
     if preset is not None:
         try:
             preset_data = catalog.preset(preset)
@@ -235,17 +265,32 @@ def install(
         scope = preset_data.scope
         platform_ids = list(preset_data.platforms)
         method = preset_data.method
-    if all_platforms:
-        platform_ids = sorted(load_registry())
-    if no_input and not platform_ids:
-        err.print("[red]--no-input 需要同时提供 --platform、--preset 或 --all[/red]")
-        raise typer.Exit(2)
-    if not no_input and not platform_ids:
-        answer = typer.prompt("请输入平台（逗号分隔）", default="")
-        platform_ids = _split_platforms(answer)
-        if not platform_ids:
-            err.print("[red]必须选择至少一个平台[/red]")
-            raise typer.Exit(2)
+    try:
+        platform_ids = _select_install_platforms(
+            platform_ids, no_input=no_input, all_platforms=all_platforms
+        )
+    except PlatformError as exc:
+        typer.echo(f"平台错误：{exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    if not editable and name in catalog.external_skills():
+        home = runtime.home.path if hasattr(runtime.home, "path") else runtime.home
+        try:
+            external = ExternalInstaller(
+                catalog,
+                home,
+                os_name=_current_os_name(),
+                env=os.environ,
+            ).install(name, platform_ids)
+        except (ExternalError, PlatformError) as exc:
+            err.print(f"[red]外部技能安装失败：[/red]{exc}")
+            raise typer.Exit(1) from exc
+        console.print(
+            f"[green]已安装外部技能：[/green]{name} -> {_short(external.path)}"
+            if external.path
+            else f"[green]已安装外部技能：[/green]{name}"
+        )
+        return
     try:
         if editable:
             source = Path(name).expanduser().resolve()
@@ -255,7 +300,7 @@ def install(
             result = runtime.lifecycle.install_editable(
                 source,
                 scope=scope,
-                platform_ids=platform_ids or [],
+                platform_ids=platform_ids,
                 project_root=project_root,
             )
         else:
@@ -264,14 +309,14 @@ def install(
                 name,
                 version,
                 scope=scope,
-                platform_ids=platform_ids or [],
+                platform_ids=platform_ids,
                 method=method,
                 project_root=project_root,
             )
     except GitHubNetworkError as exc:
         err.print(f"[red]网络错误：[/red]{exc}")
         raise typer.Exit(3) from exc
-    except (LifecycleError, InstallConflict, RegistryError) as exc:
+    except (LifecycleError, InstallConflict, PlatformError, RegistryError) as exc:
         err.print(f"[red]安装失败：[/red]{exc}")
         raise typer.Exit(1) from exc
     console.print(f"[green]已安装：[/green]{kind} {name} {result.version} -> {_short(result.path)}")

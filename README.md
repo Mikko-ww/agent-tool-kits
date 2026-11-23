@@ -62,7 +62,7 @@ atkits list                   # 列出本机安装记录
 atkits check                  # 强制刷新 catalog
 atkits status                 # 检查本机安装健康状态
 
-atkits install <name>         # 交互选择范围、平台、安装方式
+atkits install <name>         # 在终端中打开平台多选菜单
 atkits install <name>@1.0.0   # 安装指定版本
 atkits install <name> --platform codex,cursor
 atkits install <name> --scope global --method symlink
@@ -80,7 +80,14 @@ atkits platforms              # 查看平台路径定义
 atkits --version
 ```
 
-非交互安装必须提供 `--platform`、`--preset` 或 `--all`。
+平台菜单显示平台名称和 ID，默认不勾选。可键入名称或 ID 搜索，再用 ↑/↓ 移动、空格勾选、回车确认；按 Ctrl+C 取消。安装范围默认是 `global`，安装方式默认是 `symlink`。
+
+非交互场景（如管道、CI 或显式指定 `--no-input`）不会打开菜单，必须提供 `--platform`、`--preset` 或 `--all`。例如：
+
+```bash
+atkits install character-design --platform codex,claude-code --no-input
+atkits install character-design --scope project --project-root "$PWD"
+```
 
 ## 平台选择
 
