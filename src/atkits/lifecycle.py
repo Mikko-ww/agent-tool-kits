@@ -12,7 +12,7 @@ from typing import Protocol
 from atkits.home import AtkitsHome
 from atkits.installers import Installer
 from atkits.models import AssetVersion, InstallTarget, RegistryError
-from atkits.platforms import project_id, resolve_targets
+from atkits.platforms import normalize_platform_ids, project_id, resolve_targets
 from atkits.state import StateStore
 
 
@@ -259,7 +259,7 @@ class Lifecycle:
             resolved_project_id = None
         records = self._records(kind, name, scope, resolved_project_id)
         updated_records: list[InstallTarget] = []
-        requested = set(platform_ids)
+        requested = set(normalize_platform_ids(platform_ids))
         for record in records:
             consumers = requested & set(record.consumers)
             if not consumers:

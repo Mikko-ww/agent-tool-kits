@@ -6,13 +6,22 @@ import hashlib
 import json
 import os
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
 _VALID_OS = {"darwin", "linux", "windows"}
 _VALID_ROLES = {"primary", "shared", "compatibility"}
+_PLATFORM_ALIASES = {"claude-code": "claude"}
+
+
+def normalize_platform_id(platform_id: str) -> str:
+    return _PLATFORM_ALIASES.get(platform_id, platform_id)
+
+
+def normalize_platform_ids(platform_ids: Iterable[str]) -> list[str]:
+    return list(dict.fromkeys(map(normalize_platform_id, platform_ids)))
 
 
 class PlatformError(ValueError):
@@ -82,7 +91,7 @@ def resolve_targets(
     cwd = cwd.expanduser().resolve()
     home = _home_from_env(env)
     groups: dict[str, dict[str, Any]] = {}
-    for platform_id in platform_ids:
+    for platform_id in normalize_platform_ids(platform_ids):
         definition = registry.get(platform_id)
         if definition is None:
             raise PlatformError(f"unknown platform {platform_id!r}")

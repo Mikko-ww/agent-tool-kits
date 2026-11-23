@@ -43,7 +43,7 @@
       "detect": [{ "type": "path", "template": "$XDG_CONFIG_HOME/opencode" }]
     },
     {
-      "id": "claude-code",
+      "id": "claude",
       "display_name": "Claude Code",
       "project_paths": [
         { "id": "claude", "template": ".claude/skills", "role": "primary" }

@@ -1,5 +1,6 @@
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -13,6 +14,7 @@ import atkits.cli as cli_module
 import atkits.self_update as self_update_module
 from atkits.cli import app
 from atkits.github import GitHubReleaseClient
+from atkits.lifecycle import StatusReport
 
 
 @pytest.fixture
@@ -28,6 +30,67 @@ def test_remote_list_does_not_download_packages(cli, fake_lifecycle):
     assert "pdf" in result.output
     assert "daily-coding" in result.output
     assert fake_lifecycle.package_downloads == 0
+
+
+def _local_install_rows(output):
+    return [
+        [cell.strip() for cell in line.split("│")[1:-1]]
+        for line in output.splitlines()
+        if line.strip().startswith("│")
+    ]
+
+
+def test_list_groups_matching_installs_and_keeps_path_details(
+    cli, fake_lifecycle, install_target, tmp_path, monkeypatch
+):
+    codex = replace(install_target, path=tmp_path / ".agents/skills/foo", consumers=("codex",))
+    claude = replace(codex, path=tmp_path / ".claude/skills/foo", consumers=("claude",))
+    project = replace(
+        codex,
+        scope="project",
+        project_id="example",
+        path=tmp_path / "project/.agents/skills/foo",
+    )
+    reports = [StatusReport(record, True) for record in (codex, claude, project)]
+    monkeypatch.setattr(fake_lifecycle, "status", lambda: reports)
+    env = {"COLUMNS": "240"}
+
+    summary = cli.invoke(app, ["list"], env=env)
+    assert summary.exit_code == 0, summary.exception
+    assert _local_install_rows(summary.output) == [["skill", "foo", "1.1.0", "codex, claude", "ok"]]
+
+    details = cli.invoke(app, ["list", "--details"], env=env)
+    assert details.exit_code == 0, details.exception
+    assert _local_install_rows(details.output) == [
+        ["skill", "foo", "1.1.0", str(record.path), record.consumers[0], "ok"]
+        for record in (codex, claude, project)
+    ]
+
+
+def test_list_keeps_distinct_versions_and_broken_targets_visible(
+    cli, fake_lifecycle, install_target, monkeypatch
+):
+    reports = [
+        StatusReport(replace(install_target, consumers=("codex", "cursor")), True),
+        StatusReport(replace(install_target, consumers=("claude",)), False),
+        StatusReport(replace(install_target, version="1.0.0", consumers=("claude",)), True),
+        StatusReport(replace(install_target, kind="plugin", consumers=("codex",)), True),
+    ]
+    monkeypatch.setattr(fake_lifecycle, "status", lambda: reports)
+    result = cli.invoke(app, ["list"], env={"COLUMNS": "120"})
+    assert result.exit_code == 0, result.exception
+    assert _local_install_rows(result.output) == [
+        ["skill", "foo", "1.1.0", "codex, cursor", "ok"],
+        ["skill", "foo", "1.1.0", "claude", "broken"],
+        ["skill", "foo", "1.0.0", "claude", "ok"],
+        ["plugin", "foo", "1.1.0", "codex", "ok"],
+    ]
+
+
+def test_list_details_cannot_be_used_for_remote_catalog(cli):
+    result = cli.invoke(app, ["list", "--remote", "--details"], env={"COLUMNS": "120"})
+    assert result.exit_code == 2
+    assert "不能与 --remote 同用" in result.output
 
 
 def test_install_requires_explicit_platform_with_no_input(cli, fake_lifecycle):
@@ -49,25 +112,25 @@ def test_install_interactively_passes_selected_platforms(cli, fake_lifecycle, mo
 
     def choose(registry):
         assert registry["codex"].display_name == "Codex"
-        assert registry["claude-code"].display_name == "Claude Code"
-        return ["codex", "claude-code"]
+        assert registry["claude"].display_name == "Claude Code"
+        return ["codex", "claude"]
 
     monkeypatch.setattr(cli_module, "_prompt_platforms", choose)
     result = cli.invoke(app, ["install", "foo"])
     assert result.exit_code == 0
-    assert fake_lifecycle.last_request["platform_ids"] == ["codex", "claude-code"]
+    assert fake_lifecycle.last_request["platform_ids"] == ["codex", "claude"]
     assert fake_lifecycle.last_request["scope"] == "global"
     assert fake_lifecycle.last_request["method"] == "symlink"
 
 
 def test_platform_menu_handles_arrow_keys_search_and_empty_selection():
     registry = cli_module.load_registry()
-    choices = {key: registry[key] for key in ("codex", "claude-code")}
+    choices = {key: registry[key] for key in ("codex", "claude")}
     with create_pipe_input() as terminal_input:
         # Submit empty, move down and back up, select Codex, then search and select Claude Code.
         terminal_input.send_bytes(b"\r\x1b[C\x1b[D\x1b[B\x1b[A claude \r\x03")
         with create_app_session(input=terminal_input, output=DummyOutput()):
-            assert cli_module._prompt_platforms(choices) == ["codex", "claude-code"]
+            assert cli_module._prompt_platforms(choices) == ["codex", "claude"]
 
 
 def test_install_cancel_does_not_download_package(cli, fake_lifecycle, monkeypatch):
@@ -85,13 +148,27 @@ def test_install_cancel_does_not_download_package(cli, fake_lifecycle, monkeypat
 
 
 def test_install_reports_unknown_platform_without_installing(cli, fake_lifecycle):
-    result = cli.invoke(app, ["install", "foo", "--platform", "codex,claude", "--no-input"])
+    result = cli.invoke(app, ["install", "foo", "--platform", "codex,cluade", "--no-input"])
     assert result.exit_code == 2
     assert "未知平台" in result.output
-    assert "'claude'" in result.output
-    assert "claude-code" in result.output
+    assert "'cluade'" in result.output
+    assert "claude" in result.output.split("可用平台 ID：", 1)[1]
     assert "Traceback" not in result.output
     assert fake_lifecycle.package_downloads == 0
+
+
+@pytest.mark.parametrize("command", ["install", "uninstall"])
+def test_claude_legacy_alias_is_accepted_and_deduplicated(cli, fake_lifecycle, command):
+    result = cli.invoke(app, [command, "foo", "--platform", "claude-code,claude"])
+    assert result.exit_code == 0, result.exception
+    assert fake_lifecycle.last_request["platform_ids"] == ["claude"]
+
+
+def test_platforms_displays_only_canonical_claude_id(cli):
+    result = cli.invoke(app, ["platforms"])
+    assert result.exit_code == 0
+    assert "claude" in result.output
+    assert "claude-code" not in result.output
 
 
 @pytest.mark.parametrize("command", [["install", "foo"], ["list"], ["self-update"]])

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from atkits.models import Catalog
-from atkits.platforms import load_registry, resolve_targets
+from atkits.platforms import load_registry, normalize_platform_ids, resolve_targets
 
 
 class ExternalError(RuntimeError):
@@ -108,8 +108,8 @@ def build_add_command(
     cmd = ["npx", "-y", "skills@latest", "add", source]
     for name in skill_names:
         cmd += ["--skill", name]
-    for agent in agents:
-        cmd += ["--agent", agent]
+    for agent in normalize_platform_ids(agents):
+        cmd += ["--agent", "claude-code" if agent == "claude" else agent]
     if global_scope:
         cmd.append("--global")
     cmd.append("--yes")

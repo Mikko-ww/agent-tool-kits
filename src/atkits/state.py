@@ -12,6 +12,7 @@ from filelock import FileLock
 
 from atkits.home import AtkitsHome
 from atkits.models import InstallTarget
+from atkits.platforms import normalize_platform_id, normalize_platform_ids
 
 _STATE_SCHEMA_VERSION = 1
 
@@ -70,6 +71,7 @@ class StateStore:
         target_id: str,
         consumer: str,
     ) -> InstallTarget:
+        consumer = normalize_platform_id(consumer)
         key = _state_key(kind, name, scope, project_id, target_id)
         with self.lock:
             data = self._load()
@@ -149,7 +151,7 @@ def _decode_target(raw: object) -> InstallTarget:
             target_id=raw["target_id"],
             path=Path(raw["path"]),
             strategy=raw["strategy"],
-            consumers=tuple(raw["consumers"]),
+            consumers=tuple(normalize_platform_ids(raw["consumers"])),
             package_path=None if raw.get("package_path") is None else Path(raw["package_path"]),
             source_path=None if raw.get("source_path") is None else Path(raw["source_path"]),
             artifact_sha256=raw.get("artifact_sha256"),

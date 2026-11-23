@@ -19,10 +19,15 @@ from atkits.external import ExternalError, ExternalInstaller
 from atkits.github import GitHubError, GitHubNetworkError, GitHubReleaseClient
 from atkits.home import AtkitsHome
 from atkits.installers import InstallConflict, Installer
-from atkits.lifecycle import Lifecycle, LifecycleError
+from atkits.lifecycle import Lifecycle, LifecycleError, StatusReport
 from atkits.models import Catalog, RegistryError
 from atkits.packages import PackageError, PackageStore
-from atkits.platforms import PlatformDefinition, PlatformError, load_registry
+from atkits.platforms import (
+    PlatformDefinition,
+    PlatformError,
+    load_registry,
+    normalize_platform_ids,
+)
 from atkits.registry import RegistryClient
 from atkits.self_update import SelfUpdateError
 from atkits.self_update import self_update as run_self_update
@@ -149,7 +154,8 @@ def _select_install_platforms(
             raise PlatformError("平台注册表没有可选平台")
         platform_ids = _prompt_platforms(registry)
 
-    unknown = list(dict.fromkeys(item for item in platform_ids if item not in registry))
+    platform_ids = normalize_platform_ids(platform_ids)
+    unknown = [item for item in platform_ids if item not in registry]
     if unknown:
         typer.echo("未知平台：" + "、".join(map(repr, unknown)), err=True)
         typer.echo("可用平台 ID：" + ", ".join(registry), err=True)
@@ -184,8 +190,12 @@ def init(
 @app.command("list")
 def list_cmd(
     remote: Annotated[bool, typer.Option("--remote", help="列出远端资产")] = False,
+    details: Annotated[bool, typer.Option("--details", help="按安装路径列出本机明细")] = False,
 ) -> None:
-    """列出版本化资产。"""
+    """汇总本机安装，也可查看路径明细或远端资产。"""
+    if remote and details:
+        raise typer.BadParameter("--details 只适用于本机安装，不能与 --remote 同用")
+
     try:
         runtime = _build_runtime()
         if remote:
@@ -193,7 +203,10 @@ def list_cmd(
             _render_remote_catalog(catalog)
         else:
             reports = runtime.lifecycle.status()
-            _render_status(reports)
+            if details:
+                _render_status(reports)
+            else:
+                _render_install_summary(reports)
     except GitHubNetworkError as exc:
         err.print(f"[red]网络错误：[/red]{exc}")
         raise typer.Exit(3) from exc
@@ -345,7 +358,11 @@ def uninstall(
     runtime = _build_runtime()
     try:
         runtime.lifecycle.uninstall(
-            kind, name, scope=scope, platform_ids=platform_ids, project_root=project_root
+            kind,
+            name,
+            scope=scope,
+            platform_ids=normalize_platform_ids(platform_ids),
+            project_root=project_root,
         )
     except (LifecycleError, InstallConflict) as exc:
         err.print(f"[red]卸载失败：[/red]{exc}")
@@ -450,13 +467,41 @@ def _render_remote_catalog(catalog: Catalog) -> None:
             preset_table.add_row(
                 preset.name,
                 preset.scope,
-                ",".join(preset.platforms),
+                ",".join(normalize_platform_ids(preset.platforms)),
                 preset.method,
             )
         console.print(preset_table)
 
 
-def _render_status(reports: list[object]) -> None:
+def _status_label(healthy: bool) -> str:
+    return "[green]ok[/green]" if healthy else "[red]broken[/red]"
+
+
+def _render_install_summary(reports: list[StatusReport]) -> None:
+    groups: dict[tuple[str, str, str | None, bool], list[str]] = {}
+    for report in reports:
+        record = report.record
+        group = (record.kind, record.name, record.version, report.healthy)
+        groups.setdefault(group, []).extend(record.consumers)
+
+    table = Table(title="本机安装汇总")
+    table.add_column("类型")
+    table.add_column("名称")
+    table.add_column("版本")
+    table.add_column("平台", overflow="fold")
+    table.add_column("状态")
+    for (kind, name, version, healthy), platforms in groups.items():
+        table.add_row(
+            kind,
+            name,
+            version or "-",
+            ", ".join(normalize_platform_ids(platforms)),
+            _status_label(healthy),
+        )
+    console.print(table)
+
+
+def _render_status(reports: list[StatusReport]) -> None:
     table = Table(title="本机安装")
     table.add_column("类型")
     table.add_column("名称")
@@ -466,14 +511,13 @@ def _render_status(reports: list[object]) -> None:
     table.add_column("状态")
     for report in reports:
         record = report.record
-        status = "[green]ok[/green]" if report.healthy else "[red]broken[/red]"
         table.add_row(
             record.kind,
             record.name,
             record.version or "-",
             _short(record.path),
             ",".join(record.consumers),
-            status,
+            _status_label(report.healthy),
         )
     console.print(table)
 

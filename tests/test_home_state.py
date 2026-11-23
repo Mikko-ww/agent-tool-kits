@@ -40,6 +40,18 @@ def test_remove_consumer_keeps_shared_target(home, install_target):
     assert record.consumers == ("cursor",)
 
 
+def test_legacy_claude_consumer_stays_readable_without_rewriting_state(home, install_target):
+    state = StateStore(home)
+    state.put(dataclasses.replace(install_target, consumers=("claude-code", "codex")))
+    stored = home.state_path.read_bytes()
+
+    (record,) = state.all()
+    assert record.consumers == ("claude", "codex")
+    assert home.state_path.read_bytes() == stored
+    record = state.remove_consumer("skill", "foo", "global", None, record.target_id, "claude")
+    assert record.consumers == ("codex",)
+
+
 def test_project_state_keys_do_not_collide(
     home, project_install_target, other_project_install_target
 ):

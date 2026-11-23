@@ -58,7 +58,8 @@ atkits init --registry Mikko-ww/agent-tool-kits
 
 ```bash
 atkits list --remote          # 列出远端 Skill / Plugin / CLI / 外部收藏 / preset
-atkits list                   # 列出本机安装记录
+atkits list                   # 按资产汇总本机安装
+atkits list --details         # 查看每个安装路径的明细
 atkits check                  # 强制刷新 catalog
 atkits status                 # 检查本机安装健康状态
 
@@ -80,16 +81,20 @@ atkits platforms              # 查看平台路径定义
 atkits --version
 ```
 
+`atkits list` 会把同一资产、同版本且健康状态相同的平台合并显示；版本或状态不同时，分行标明对应平台。用 `--details` 查看各安装路径。
+
 平台菜单显示平台名称和 ID，默认不勾选。可键入名称或 ID 搜索，再用 ↑/↓ 移动、空格勾选、回车确认；按 Ctrl+C 取消。安装范围默认是 `global`，安装方式默认是 `symlink`。
 
 非交互场景（如管道、CI 或显式指定 `--no-input`）不会打开菜单，必须提供 `--platform`、`--preset` 或 `--all`。例如：
 
 ```bash
-atkits install character-design --platform codex,claude-code --no-input
+atkits install character-design --platform codex,claude --no-input
 atkits install character-design --scope project --project-root "$PWD"
 ```
 
 ## 平台选择
+
+Claude Code 的平台 ID 是 `claude`；旧命令或预设中的 `claude-code` 仍可使用。此变化不改动安装目录，已有安装无需重装。
 
 `atkits` 不默认安装到所有平台。安装前会解析逻辑平台到真实物理路径，并显示 primary/shared/compatibility 目标。
 

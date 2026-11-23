@@ -2,7 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from atkits.external import ExternalError, ExternalInstaller, _default_command_runner
+from atkits.external import (
+    ExternalError,
+    ExternalInstaller,
+    _default_command_runner,
+    build_add_command,
+)
 
 
 @pytest.fixture
@@ -63,3 +68,11 @@ def test_default_command_runner_calls_run_add(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("atkits.external.run_add", fake_run_add)
     _default_command_runner("openai/skills", "pdf", ["codex"])
     assert calls == [("openai/skills", ["pdf"], ["codex"], True, None, False)]
+
+
+def test_external_installer_translates_claude_to_upstream_id():
+    command = build_add_command(
+        "openai/skills", ["pdf"], ["codex", "claude", "claude-code"], global_scope=True
+    )
+    agents = [command[i + 1] for i, arg in enumerate(command) if arg == "--agent"]
+    assert agents == ["codex", "claude-code"]

@@ -72,7 +72,16 @@ def test_project_id_is_stable_for_equivalent_paths(tmp_path):
 
 def test_load_registry_reads_packaged_file():
     registry = load_registry()
-    assert {"codex", "cursor", "opencode"}.issubset(registry)
+    assert {"codex", "cursor", "opencode", "claude"}.issubset(registry)
+    assert "claude-code" not in registry
+
+
+@pytest.mark.parametrize("platform_ids", [["claude"], ["claude-code"], ["claude", "claude-code"]])
+def test_claude_alias_resolves_same_target(tmp_path, platform_ids):
+    (target,) = resolve_targets("global", platform_ids, tmp_path, "darwin", {"HOME": str(tmp_path)})
+    assert target.target_id == "claude"
+    assert target.path == tmp_path / ".claude/skills"
+    assert target.consumers == ("claude",)
 
 
 def test_detect_platforms_uses_existing_paths(platform_env):
