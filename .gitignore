@@ -10,3 +10,7 @@ build/
 
 # Local reference material
 temp_ref/
+
+# gh-research 技能的落盘产物（本机调研结果，不入库）
+/gh-research/
+/.e2e-gh-research/

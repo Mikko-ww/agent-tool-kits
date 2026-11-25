@@ -8,6 +8,9 @@ assets:
   searching-github-projects:
     kind: skill
     description: 搜索、筛选并比较 GitHub 项目
+  gh-research:
+    kind: skill
+    description: 取证式 GitHub 项目调研，产出证据链与 HTML 报告
   skill-lookup:
     kind: skill
     description: 查找、获取和安装 Agent 技能

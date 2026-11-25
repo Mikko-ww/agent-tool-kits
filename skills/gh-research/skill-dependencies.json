@@ -1,0 +1,197 @@
+{
+  "schema_version": "1",
+  "capabilities": ["discover", "verify", "score", "report"],
+  "dependencies": [
+    {
+      "id": "python-runtime",
+      "type": "runtime",
+      "required": true,
+      "auth_type": "none",
+      "capabilities": ["discover", "verify", "score", "report"],
+      "checks": [
+        {
+          "id": "python-version",
+          "type": "python",
+          "required": true,
+          "min_version": "3.10"
+        }
+      ],
+      "setup": {
+        "official_home_url": "https://www.python.org/",
+        "official_docs_url": "https://docs.python.org/3/",
+        "download_url": "https://www.python.org/downloads/",
+        "steps": [
+          "确认本机已安装 Python 3.10 或更高版本。",
+          "macOS 可用 Homebrew 安装：brew install python@3.12。",
+          "Windows 从官方下载页安装，并在安装向导中勾选 Add python.exe to PATH。",
+          "Linux 使用发行版包管理器安装 python3。",
+          "安装后重新打开终端，确认命令可用。"
+        ],
+        "verify": "python3 --version",
+        "security": "本技能脚本只使用 Python 标准库，不需要 pip 安装任何第三方包，也不读取凭据。",
+        "rotate_or_revoke": "卸载或切换 Python 版本后重新运行环境检查；本技能不保存任何凭据。",
+        "verified_at": "2026-11-24",
+        "applies_to_version": "3.12.10"
+      },
+      "degradation": [
+        {
+          "capability": "discover",
+          "trigger": "Python 低于 3.10 或不可用，脚本无法启动。",
+          "fallback": "改用宿主自带的网页搜索与 GitHub 页面手工检索，把候选按 references/evidence-and-scoring.md 的字段手工记入 candidates.jsonl。",
+          "user_input": "可用的 Python 3.10+ 解释器路径，或愿意手工提供候选清单。",
+          "limitations": "无法自动分页、去重和批量取证，候选规模受限。",
+          "evidence_label": "部分验证",
+          "recovery": "安装 Python 3.10+ 后重新运行 scripts/check_environment.py。",
+          "stop_condition": "既没有可用 Python，用户也不提供候选来源时停止发现阶段。"
+        },
+        {
+          "capability": "verify",
+          "trigger": "Python 不可用导致取证脚本无法运行。",
+          "fallback": "由宿主直接打开仓库页面与 README 逐条核验，并手工记录取证日期与来源。",
+          "user_input": "需要核验的仓库清单。",
+          "limitations": "无法批量取元数据，语言占比等字段可能缺失。",
+          "evidence_label": "部分验证",
+          "recovery": "恢复 Python 后重跑 verify 子命令补齐字段。",
+          "stop_condition": "无法打开任何仓库页面且用户不提供资料时，该候选标为 E4 未核验。"
+        },
+        {
+          "capability": "score",
+          "trigger": "Python 不可用导致评分闸门无法执行。",
+          "fallback": "按 references/evidence-and-scoring.md 手工执行同样的校验规则，逐条列出分数与证据 id 的对应关系。",
+          "user_input": "",
+          "limitations": "缺少机器校验，可能出现分数与证据不匹配，需要人工复核。",
+          "evidence_label": "推断",
+          "recovery": "恢复 Python 后重跑 score 子命令做机器校验。",
+          "stop_condition": "无法为某一维度找到 E1—E3 证据时，该维度标未核验，不给数字。"
+        },
+        {
+          "capability": "report",
+          "trigger": "Python 不可用导致 HTML 渲染脚本无法运行。",
+          "fallback": "只输出对话内的 Markdown 分级榜单，并明确说明未生成 HTML 文件。",
+          "user_input": "",
+          "limitations": "没有可离线打开的 HTML 报告，也没有落盘副本。",
+          "evidence_label": "部分验证",
+          "recovery": "恢复 Python 后运行 report 子命令补生成 HTML。",
+          "stop_condition": "不得声称已生成 HTML；文件未生成时必须明说。"
+        }
+      ]
+    },
+    {
+      "id": "gh-cli",
+      "type": "cli",
+      "required": false,
+      "auth_type": "browser-login",
+      "capabilities": ["discover", "verify"],
+      "checks": [
+        {
+          "id": "gh-present",
+          "type": "cli",
+          "required": true,
+          "command": "gh"
+        },
+        {
+          "id": "gh-version-probe",
+          "type": "cli_probe",
+          "required": true,
+          "target": "gh --version"
+        },
+        {
+          "id": "gh-auth-probe",
+          "type": "auth_probe",
+          "required": true,
+          "target": "gh auth status"
+        }
+      ],
+      "setup": {
+        "official_home_url": "https://cli.github.com/",
+        "official_docs_url": "https://cli.github.com/manual/",
+        "download_url": "https://cli.github.com/",
+        "login_url": "https://github.com/login",
+        "console_path": [
+          "终端执行 gh auth login",
+          "选择 GitHub.com",
+          "选择 HTTPS 协议",
+          "选择 Login with a web browser",
+          "复制一次性代码并在浏览器中授权"
+        ],
+        "credential_storage": "由 gh 自行写入操作系统密钥链（macOS Keychain、Windows 凭据管理器、Linux secret service）；本技能不读取、不复制、不记录该凭据。",
+        "steps": [
+          "从官方主页按操作系统安装 GitHub CLI。",
+          "执行 gh auth login，按提示选择 GitHub.com 与浏览器登录。",
+          "在浏览器中完成授权，无需在对话中粘贴任何 Token。",
+          "执行 gh auth status 确认已登录。",
+          "执行 gh api rate_limit 确认搜索额度可用。"
+        ],
+        "verify": "gh auth status",
+        "rotate_or_revoke": "执行 gh auth logout 退出登录；在 GitHub 网页 Settings → Applications → Authorized OAuth Apps 中撤销 GitHub CLI 授权后重新 gh auth login。",
+        "security": "只读使用 GitHub 搜索与仓库接口，不创建、不修改、不删除任何远端资源；不要求超出读取公开仓库所需的权限。",
+        "verified_at": "2026-11-24",
+        "applies_to_version": "2.102.0"
+      },
+      "degradation": [
+        {
+          "capability": "discover",
+          "trigger": "gh 未安装、未登录，或搜索接口返回限流、超时、非零退出。",
+          "fallback": "改用宿主网页搜索与 GitHub 网页检索发现候选，再用 init/search 的 --from-json 把结果写入候选库。",
+          "user_input": "可选：用户直接提供的仓库链接或候选清单。",
+          "limitations": "无法分页扩量，候选覆盖面下降；Star 等数值必须标注实际来源与获取日期。",
+          "evidence_label": "部分验证",
+          "recovery": "安装并登录 gh 后重跑 search 子命令扩量。",
+          "stop_condition": "既无 gh 也无网页检索能力时停止发现，不得凭记忆列举仓库。"
+        },
+        {
+          "capability": "verify",
+          "trigger": "gh 不可用或元数据、README、代码搜索接口失败。",
+          "fallback": "改用仓库网页与 README 页面人工核验；代码级证据无法取得时降级为文档级 E2。",
+          "user_input": "可选：用户粘贴的 README 片段或代码片段，需注明来源与日期。",
+          "limitations": "拿不到 E1 代码级证据时，核心能力只能表述为声明具备，相似度按规则封顶。",
+          "evidence_label": "部分验证",
+          "recovery": "恢复 gh 后重跑 verify 与 code-search 补齐 E1 证据。",
+          "stop_condition": "任何指标都取不到时标 E4 未核验，不得用记忆或推测填数。"
+        }
+      ]
+    }
+  ],
+  "functional_degradations": [
+    {
+      "capability": "discover",
+      "trigger": "多路查询返回空结果或高度重复，候选不足以支撑分级。",
+      "fallback": "放宽一个限定词或改用同义词重搜；仍不足时如实说明该方向候选稀少，只给出已核验的少量候选。",
+      "user_input": "可选：用户补充的参考产品、竞品名或必须能力。",
+      "limitations": "候选池小，分级置信度下降。",
+      "evidence_label": "部分验证",
+      "recovery": "补齐产品指纹后重新构造查询矩阵。",
+      "stop_condition": "不得为凑数把不同赛道的项目混入榜单。"
+    },
+    {
+      "capability": "verify",
+      "trigger": "个别仓库已归档、被删除、私有或 README 缺失。",
+      "fallback": "跳过该仓库并在候选库记录跳过原因，继续核验其余候选。",
+      "user_input": "",
+      "limitations": "该仓库不进入推荐，或只作为反例说明。",
+      "evidence_label": "部分验证",
+      "recovery": "仓库恢复公开后重新核验。",
+      "stop_condition": "不得把无法核验的仓库写成已核验。"
+    },
+    {
+      "capability": "score",
+      "trigger": "某一维度找不到 E1—E3 证据，或核心能力只有 E2 文档级证据。",
+      "fallback": "该维度标未核验且不给数字；核心能力仅 E2 时相似度封顶 75 并在注意事项写明未验证实现。",
+      "user_input": "",
+      "limitations": "综合参考值可能无法计算，分级降为待定。",
+      "evidence_label": "推断",
+      "recovery": "补取代码级证据后重新评分。",
+      "stop_condition": "禁止用精确分数掩盖证据不足。"
+    },
+    {
+      "capability": "report",
+      "trigger": "落盘目录不可写、磁盘不足或渲染失败。",
+      "fallback": "保留对话内 Markdown 输出，明确说明 HTML 与落盘副本未生成及原因。",
+      "user_input": "可选：用户指定的可写输出目录。",
+      "limitations": "没有可离线打开的报告，跨会话无法续跑。",
+      "evidence_label": "部分验证",
+      "recovery": "更换可写目录后重跑 report 子命令。",
+      "stop_condition": "不得在文件未生成时给出 HTML 路径。"
+    }
+  ]
+}
