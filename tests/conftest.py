@@ -685,6 +685,7 @@ class FakeCLILifecycle:
         self.fail_network = False
         self.repaired_target: Path | None = None
         self.damaged = False
+        self.install_targets: list[SimpleNamespace] | None = None
 
     def check(self):
         if self.fail_network:
@@ -712,10 +713,14 @@ class FakeCLILifecycle:
             "project_root": project_root,
         }
         self.package_downloads += 1
+        targets = self.install_targets or [
+            SimpleNamespace(path=Path(f"/tmp/{name}"), consumers=tuple(platform_ids))
+        ]
         return SimpleNamespace(
             version=version or "1.1.0",
-            path=Path(f"/tmp/{name}"),
+            path=targets[0].path,
             project_id=None,
+            targets=tuple(targets),
         )
 
     def install_editable(

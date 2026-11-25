@@ -366,7 +366,18 @@ def install(
     ) as exc:
         err.print(f"[red]安装失败：[/red]{exc}")
         raise typer.Exit(1) from exc
-    console.print(f"[green]已安装：[/green]{kind} {name} {result.version} -> {_short(result.path)}")
+    targets = getattr(result, "targets", None)
+    if targets and len(targets) > 1:
+        console.print(
+            f"[green]已安装：[/green]{kind} {name} {result.version}（{len(targets)} 个目标）"
+        )
+        for target in targets:
+            consumers = ",".join(normalize_platform_ids(target.consumers))
+            console.print(f"  {_short(target.path)} [dim]({consumers})[/dim]")
+    else:
+        console.print(
+            f"[green]已安装：[/green]{kind} {name} {result.version} -> {_short(result.path)}"
+        )
 
 
 @app.command()

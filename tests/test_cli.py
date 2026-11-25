@@ -299,6 +299,57 @@ def test_uninitialized_cli_shows_registry_hint(monkeypatch, command):
     assert "Traceback" not in result.output
 
 
+def test_install_prints_every_physical_target(cli, fake_lifecycle):
+    """选 codex,cursor,claude 会落到三个物理路径，输出必须全部列出。"""
+    fake_lifecycle.install_targets = [
+        SimpleNamespace(path=Path.home() / ".agents/skills/foo", consumers=("codex", "cursor")),
+        SimpleNamespace(path=Path.home() / ".cursor/skills/foo", consumers=("cursor",)),
+        SimpleNamespace(path=Path.home() / ".claude/skills/foo", consumers=("claude",)),
+    ]
+    result = cli.invoke(
+        app,
+        ["install", "foo", "--platform", "codex,cursor,claude", "--no-input"],
+        env={"NO_COLOR": "1", "COLUMNS": "120"},
+    )
+    assert result.exit_code == 0
+    output = Text.from_ansi(result.output).plain
+    assert "~/.agents/skills/foo" in output
+    assert "~/.cursor/skills/foo" in output
+    assert "~/.claude/skills/foo" in output
+
+
+def test_install_output_names_consumers_per_target(cli, fake_lifecycle):
+    """共享路径要标出 consumers，用户才知道哪些平台共用这一份。"""
+    fake_lifecycle.install_targets = [
+        SimpleNamespace(path=Path.home() / ".agents/skills/foo", consumers=("codex", "cursor")),
+        SimpleNamespace(path=Path.home() / ".claude/skills/foo", consumers=("claude",)),
+    ]
+    result = cli.invoke(
+        app,
+        ["install", "foo", "--platform", "codex,cursor,claude", "--no-input"],
+        env={"NO_COLOR": "1", "COLUMNS": "120"},
+    )
+    assert result.exit_code == 0
+    output = Text.from_ansi(result.output).plain
+    agents_line = next(line for line in output.splitlines() if ".agents/skills/foo" in line)
+    assert "codex" in agents_line and "cursor" in agents_line
+
+
+def test_install_single_target_output_stays_one_line(cli, fake_lifecycle):
+    fake_lifecycle.install_targets = [
+        SimpleNamespace(path=Path.home() / ".agents/skills/foo", consumers=("codex",))
+    ]
+    result = cli.invoke(
+        app,
+        ["install", "foo", "--platform", "codex", "--no-input"],
+        env={"NO_COLOR": "1", "COLUMNS": "120"},
+    )
+    assert result.exit_code == 0
+    output = Text.from_ansi(result.output).plain
+    assert "~/.agents/skills/foo" in output
+    assert len([line for line in output.splitlines() if line.strip()]) == 1
+
+
 def test_install_specific_version_and_platforms(cli, fake_lifecycle):
     result = cli.invoke(
         app,
