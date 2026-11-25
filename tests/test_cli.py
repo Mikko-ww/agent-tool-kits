@@ -451,7 +451,7 @@ def test_self_update_command_downloads_wheel(home, http_server, monkeypatch: pyt
     http_server.set_route("/repos/owner/repo/releases/assets/53", 200, wheel_bytes)
     uv_calls = []
 
-    def fake_uv(command, *, check, capture_output, text):
+    def fake_uv(command, *, check, capture_output, text, encoding, errors):
         uv_calls.append(command[:4])
         wheel = Path(command[4])
         assert wheel.name == wheel_name

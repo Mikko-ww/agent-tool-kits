@@ -52,10 +52,17 @@ def self_update(
             if shutil.which(uv_executable) is None:
                 raise SelfUpdateError("uv executable not found")
             completed = subprocess.run(
-                [uv_executable, *command], check=False, capture_output=True, text=True
+                [uv_executable, *command],
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
             )
             if completed.returncode != 0:
+                detail = (completed.stderr or "").strip() or (completed.stdout or "").strip()
                 raise SelfUpdateError(
-                    f"uv tool install failed: {completed.stderr.strip() or completed.stdout.strip()}"
+                    f"uv tool install failed (退出码 {completed.returncode}): "
+                    f"{detail or 'uv 未返回可解码的输出'}"
                 )
     return Version(asset.version)
